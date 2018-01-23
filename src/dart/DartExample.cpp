@@ -31,7 +31,7 @@
 #include <ctime>
 #include <vector>
 
-// #include <dart/collision/bullet/BulletCollisionDetector.hpp>
+// #include <dart/collision/dart/DARTCollisionDetector.hpp>
 #include <dart/dart.hpp>
 #include <dart/dynamics/Skeleton.hpp>
 #include <dart/utils/urdf/urdf.hpp>
@@ -185,7 +185,7 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
     _manipulator = loader.parseSkeleton(filename);
     for(size_t i = 0; i < _manipulator->getNumJoints(); i++)
         _manipulator->getJoint(i)->setPositionLimitEnforced(true);
-    _manipulator->enableSelfCollisionCheck();
+    // _manipulator->enableSelfCollisionCheck();
 
     // Position its base in a reasonable way
     Eigen::Isometry3d tf2 = Eigen::Isometry3d::Identity();
@@ -231,7 +231,7 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
     // _dartWorld->setTimeStep(0.015);
     _dartWorld->setTimeStep(0.001);
 
-    // _dartWorld->getConstraintSolver()->setCollisionDetector(dart::collision::BulletCollisionDetector::create());
+    // _dartWorld->getConstraintSolver()->setCollisionDetector(dart::collision::DARTCollisionDetector::create());
 
     /* Phong shader instance */
     _resourceManager.set("color", new Shaders::Phong);
@@ -325,20 +325,16 @@ void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
 
     // Get visual data from them
     std::vector<DartIntegration::VisualData> objects;
-    std::vector<size_t> ids;
     std::vector<MaterialData> materials;
 
-    for (size_t i = 0; i < dartSkel->objects().size(); i++) {
-        if (!dartSkel->objects()[i]->shapeNode())
-            continue;
-        auto shape = dartSkel->objects()[i]->shapeNode()->getShape();
+    for (size_t i = 0; i < dartSkel->shapeObjects().size(); i++) {
+        auto shape = dartSkel->shapeObjects()[i]->shapeNode()->getShape();
         Corrade::Utility::Debug{} << "Loading shape: "<< shape->getType();
-        auto visualData = DartIntegration::convertShapeNode(dartSkel->objects()[i]);
+        auto visualData = DartIntegration::convertShapeNode(dartSkel->shapeObjects()[i]);
         if (!visualData) {
-            Corrade::Utility::Debug{} << "Could not converted!";
+            Corrade::Utility::Debug{} << "Could not converted shape to Magnum shape!";
         }
         else {
-            ids.push_back(i);
             objects.emplace_back(*visualData);
 
             MaterialData mat;
@@ -367,7 +363,7 @@ void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
         if(indexBuffer)
             _resourceManager.set(std::to_string(_resourceOffset + i) + "-indices", indexBuffer.release(), ResourceDataState::Final, ResourcePolicy::Manual);
 
-        new ColoredObject(ResourceKey{_resourceOffset + i}, materials[i], static_cast<Object3D*>(&(dartSkel->objects()[ids[i]]->object())), &_drawables);
+        new ColoredObject(ResourceKey{_resourceOffset + i}, materials[i], static_cast<Object3D*>(&(dartSkel->shapeObjects()[i]->object())), &_drawables);
     }
     _resourceOffset += objects.size();
 
