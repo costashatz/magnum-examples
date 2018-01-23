@@ -50,7 +50,13 @@
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/MatrixTransformation3D.h>
-#include <Magnum/SceneGraph/Scene.h>
+#include <Magnum/SceneGraph/Object.hpp>
+#include <Magnum/SceneGraph/SceneGraph.h>
+#include <Magnum/Trade/AbstractImporter.h>
+#include <Magnum/Trade/ImageData.h>
+#include <Magnum/Trade/MeshData3D.h>
+#include <Magnum/Trade/PhongMaterialData.h>
+#include <Magnum/Trade/TextureData.h>
 #include <Magnum/Shaders/Phong.h>
 #include <Magnum/Timeline.h>
 
