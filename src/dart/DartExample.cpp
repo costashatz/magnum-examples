@@ -115,7 +115,6 @@ class DartExample: public Platform::Application {
         void viewportEvent(const Vector2i& size) override;
         void drawEvent() override;
         void keyPressEvent(KeyEvent& event) override;
-        void mousePressEvent(MouseEvent& event) override;
 
         void addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel);
         void updateManipulator(dart::dynamics::SkeletonPtr skel);
@@ -191,7 +190,7 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
     _manipulator = loader.parseSkeleton(filename);
     for(size_t i = 0; i < _manipulator->getNumJoints(); i++)
         _manipulator->getJoint(i)->setPositionLimitEnforced(true);
-    // _manipulator->enableSelfCollisionCheck();
+    _manipulator->enableSelfCollisionCheck();
 
     // Position its base in a reasonable way
     Eigen::Isometry3d tf2 = Eigen::Isometry3d::Identity();
@@ -315,15 +314,6 @@ void DartExample::keyPressEvent(KeyEvent& event) {
     event.setAccepted();
 }
 
-void DartExample::mousePressEvent(MouseEvent& /*event*/) {
-    // if(event.button() == MouseEvent::Button::Left) {
-    //     Vector2 clickPoint = Vector2::yScale(-1.0f)*(Vector2(event.position())/Vector2(defaultFramebuffer.viewport().size())-Vector2(0.5f))* _camera->projectionSize();
-    //     Vector3 direction = (_cameraObject->absoluteTransformation().rotationScaling() * Vector3(clickPoint, -1.f)).normalized();
-    //     shootBox(direction);
-    //     event.setAccepted();
-    // }
-}
-
 void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
     // Create DartIntegration objects/skeletons
     auto dartObj = new Object3D{&_scene};
@@ -416,13 +406,6 @@ dart::dynamics::SkeletonPtr DartExample::createNewDomino(Eigen::Vector6d positio
     
     return newDomino;
 }
-
-// void DartExample::shootBox(Vector3& dir) {
-//     Object3D* box = new Object3D(&_scene);
-//     box->translate(_cameraObject->absoluteTransformation().translation());
-
-//     createRigidBody(1.f, *box, *_bBoxShape, "redbox")->setLinearVelocity(btVector3(dir*50.f));
-// }
 
 ColoredObject::ColoredObject(ResourceKey meshId, const MaterialData& material, Object3D* parent, SceneGraph::DrawableGroup3D* group):
     Object3D{parent}, SceneGraph::Drawable3D{*this, group},
