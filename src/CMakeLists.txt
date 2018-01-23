@@ -97,3 +97,7 @@ endif()
 if(WITH_VIEWER_EXAMPLE)
     add_subdirectory(viewer)
 endif()
+
+if(WITH_WEBVR_EXAMPLE)
+    add_subdirectory(webvr)
+endif()
