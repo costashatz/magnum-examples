@@ -327,10 +327,10 @@ void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
         }
         else {
             MaterialData mat;
-            mat._ambientColor = visualData->_matData->ambientColor();
-            mat._diffuseColor = visualData->_matData->diffuseColor();
-            mat._specularColor = visualData->_matData->specularColor();
-            mat._shininess = visualData->_matData->shininess();
+            mat._ambientColor = visualData->_matData.ambientColor();
+            mat._diffuseColor = visualData->_matData.diffuseColor();
+            mat._specularColor = visualData->_matData.specularColor();
+            mat._shininess = visualData->_matData.shininess();
             
             if (mat._shininess < 1e-4f)
                 mat._shininess = 80.f;
@@ -338,7 +338,7 @@ void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
             /* Compile the mesh */
             Mesh mesh{NoCreate};
             std::unique_ptr<Buffer> buffer, indexBuffer;
-            std::tie(mesh, buffer, indexBuffer) = MeshTools::compile(*visualData->_meshData, BufferUsage::DynamicDraw);
+            std::tie(mesh, buffer, indexBuffer) = MeshTools::compile(visualData->_meshData, BufferUsage::DynamicDraw);
 
             /* Save things */
             _resourceManager.set(ResourceKey{_resourceOffset + i}, new Mesh{std::move(mesh)}, ResourceDataState::Final, ResourcePolicy::Manual);
