@@ -75,22 +75,22 @@ const double default_domino_mass =
 
 inline dart::dynamics::SkeletonPtr createDomino()
 {
-    // Create a Skeleton with the name "domino"
+    /* Create a Skeleton with the name "domino" */
     dart::dynamics::SkeletonPtr domino = dart::dynamics::Skeleton::create("domino");
 
-    // Create a body for the domino
+    /* Create a body for the domino */
     dart::dynamics::BodyNodePtr body =
         domino->createJointAndBodyNodePair<dart::dynamics::FreeJoint>(nullptr).second;
 
-    // Create a shape for the domino
+    /* Create a shape for the domino */
     std::shared_ptr<dart::dynamics::BoxShape> box(
         new dart::dynamics::BoxShape(Eigen::Vector3d(default_domino_depth,
                                         default_domino_width,
                                         default_domino_height)));
     auto shapeNode = body->createShapeNodeWith<dart::dynamics::VisualAspect, dart::dynamics::CollisionAspect, dart::dynamics::DynamicsAspect>(box);
-    shapeNode->getVisualAspect()->setColor(Eigen::Vector3d(0.4, 0.4, 0.4));
+    shapeNode->getVisualAspect()->setColor(Eigen::Vector3d(0.6, 0.6, 0.6));
 
-    // Set up inertia for the domino
+    /* Set up inertia for the domino */
     dart::dynamics::Inertia inertia;
     inertia.setMass(default_domino_mass);
     inertia.setMoment(box->computeInertia(default_domino_mass));
@@ -129,14 +129,14 @@ class DartExample: public Platform::Application {
 
         Object3D *_cameraRig, *_cameraObject;
 
-        // DART
+        /* DART */
         dart::simulation::WorldPtr _dartWorld;
         std::vector<DartIntegration::DartSkeleton*> _dartSkels;
         std::vector<Object3D*> _dartObjs;
         size_t _resourceOffset, _dominoId;
         dart::dynamics::SkeletonPtr _manipulator, _dominoSkel;
 
-        // DART control
+        /* DART control */
         Eigen::VectorXd _desiredPositions;
         const double _pGain = 200.0;
         const double _dGain = 20.0;
@@ -184,7 +184,7 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
     // _cameraObject->setTransformation(Magnum::Matrix4::lookAt(Vector3{0.f, 15.f, 2.f}, Vector3{0.f, 0.f, 0.f}, Vector3{0.f, 0.f, 1.f}));
     _cameraObject->setTransformation(Magnum::Matrix4::lookAt(Vector3{0.f, 3.f, 1.f}, Vector3{0.f, 0.f, 0.5f}, Vector3{0.f, 0.f, 1.f}));
 
-    // DART: Load Skeleton
+    /* DART: Load Skeleton */
     dart::utils::DartLoader loader;
     std::string filename = std::string(DARTEXAMPLE_DIR) + "/urdf/test.urdf";
     _manipulator = loader.parseSkeleton(filename);
@@ -192,25 +192,24 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
         _manipulator->getJoint(i)->setPositionLimitEnforced(true);
     _manipulator->enableSelfCollisionCheck();
 
-    // Position its base in a reasonable way
+    /* Position its base in a reasonable way */
     Eigen::Isometry3d tf2 = Eigen::Isometry3d::Identity();
     tf2.translation() = Eigen::Vector3d(-0.65, 0.0, 0.0);
     _manipulator->getJoint(0)->setTransformFromParentBodyNode(tf2);
 
-    // // Get it into a useful configuration
-    // _manipulator->getDof(1)->setPosition(-10.0 * M_PI / 180.0);
+    /* Get it into a useful configuration */
     _manipulator->getDof(1)->setPosition(140.0 * M_PI / 180.0);
     _manipulator->getDof(2)->setPosition(-140.0 * M_PI / 180.0);
 
     _desiredPositions = _manipulator->getPositions();
 
-    // Create a floor
+    /* Create a floor */
     dart::dynamics::SkeletonPtr floor = dart::dynamics::Skeleton::create("floor");
-    // Give the floor a body
+    /* Give the floor a body */
     dart::dynamics::BodyNodePtr body =
         floor->createJointAndBodyNodePair<dart::dynamics::WeldJoint>(nullptr).second;
 
-    // Give the body a shape
+    /* Give the body a shape */
     double floor_width = 10.0;
     double floor_height = 0.01;
     std::shared_ptr<dart::dynamics::BoxShape> box(
@@ -219,12 +218,12 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
         = body->createShapeNodeWith<dart::dynamics::VisualAspect, dart::dynamics::CollisionAspect, dart::dynamics::DynamicsAspect>(box);
     shapeNode->getVisualAspect()->setColor(Eigen::Vector3d(0.3, 0.3, 0.4));
 
-    // Put the body into position
+    /* Put the body into position */
     Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
     tf.translation() = Eigen::Vector3d(0.0, 0.0, -floor_height / 2.0);
     body->getParentJoint()->setTransformFromParentBodyNode(tf);
 
-    // Create a domino
+    /* Create first domino */
     _dominoSkel = createDomino();
 
     _dartWorld = dart::simulation::WorldPtr(new dart::simulation::World);
@@ -232,8 +231,6 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
     _dartWorld->addSkeleton(floor);
     _dartWorld->addSkeleton(_dominoSkel);
 
-    // Set the simulation at 60Hz; like the drawing one
-    // _dartWorld->setTimeStep(0.015);
     _dartWorld->setTimeStep(0.001);
 
     // _dartWorld->getConstraintSolver()->setCollisionDetector(dart::collision::DARTCollisionDetector::create());
@@ -246,7 +243,7 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
     addSkeletonToMagnum(floor);
     addSkeletonToMagnum(_dominoSkel);
 
-    // Add more dominoes
+    /* Add more dominoes for fun! */
     const double default_angle = 20.0 * M_PI / 180.0;
 
     Eigen::Vector6d positions = _dominoSkel->getPositions();
@@ -315,24 +312,20 @@ void DartExample::keyPressEvent(KeyEvent& event) {
 }
 
 void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
-    // Create DartIntegration objects/skeletons
+    /* Create DartIntegration objects/skeletons */
     auto dartObj = new Object3D{&_scene};
-    auto dartSkel = new DartIntegration::DartSkeleton{dartObj, skel};
+    auto dartSkel = new DartIntegration::DartSkeleton{*dartObj, skel};
 
-    // Get visual data from them
-    std::vector<DartIntegration::VisualData> objects;
-    std::vector<MaterialData> materials;
-
-    for (size_t i = 0; i < dartSkel->shapeObjects().size(); i++) {
-        auto shape = dartSkel->shapeObjects()[i]->shapeNode()->getShape();
+    /* Get visual data from them */
+    int i = 0;
+    for (DartIntegration::DartObject& obj : dartSkel->shapeObjects()) {
+        auto shape = obj.shapeNode()->getShape();
         Corrade::Utility::Debug{} << "Loading shape: "<< shape->getType();
-        auto visualData = DartIntegration::convertShapeNode(dartSkel->shapeObjects()[i]);
+        auto visualData = DartIntegration::convertShapeNode(obj);
         if (!visualData) {
-            Corrade::Utility::Debug{} << "Could not converted shape to Magnum shape!";
+            Corrade::Utility::Debug{} << "Could not convert Dart ShapeNode to Magnum data!";
         }
         else {
-            objects.emplace_back(*visualData);
-
             MaterialData mat;
             mat._ambientColor = visualData->_matData->ambientColor();
             mat._diffuseColor = visualData->_matData->diffuseColor();
@@ -341,27 +334,23 @@ void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
             
             if (mat._shininess < 1e-4f)
                 mat._shininess = 80.f;
-            materials.emplace_back(mat);
+
+            /* Compile the mesh */
+            Mesh mesh{NoCreate};
+            std::unique_ptr<Buffer> buffer, indexBuffer;
+            std::tie(mesh, buffer, indexBuffer) = MeshTools::compile(*visualData->_meshData, BufferUsage::DynamicDraw);
+
+            /* Save things */
+            _resourceManager.set(ResourceKey{_resourceOffset + i}, new Mesh{std::move(mesh)}, ResourceDataState::Final, ResourcePolicy::Manual);
+            _resourceManager.set(std::to_string(_resourceOffset + i) + "-vertices", buffer.release(), ResourceDataState::Final, ResourcePolicy::Manual);
+            if(indexBuffer)
+                _resourceManager.set(std::to_string(_resourceOffset + i) + "-indices", indexBuffer.release(), ResourceDataState::Final, ResourcePolicy::Manual);
+
+            new ColoredObject(ResourceKey{_resourceOffset + i}, mat, static_cast<Object3D*>(&(obj.object())), &_drawables);
         }
+        i++;
     }
-
-    // Create the drawable objects
-    for(size_t i=0;i<objects.size();i++)
-    {
-        /* Compile the mesh */
-        Mesh mesh{NoCreate};
-        std::unique_ptr<Buffer> buffer, indexBuffer;
-        std::tie(mesh, buffer, indexBuffer) = MeshTools::compile(*objects[i]._meshData, BufferUsage::DynamicDraw);
-
-        /* Save things */
-        _resourceManager.set(ResourceKey{_resourceOffset + i}, new Mesh{std::move(mesh)}, ResourceDataState::Final, ResourcePolicy::Manual);
-        _resourceManager.set(std::to_string(_resourceOffset + i) + "-vertices", buffer.release(), ResourceDataState::Final, ResourcePolicy::Manual);
-        if(indexBuffer)
-            _resourceManager.set(std::to_string(_resourceOffset + i) + "-indices", indexBuffer.release(), ResourceDataState::Final, ResourcePolicy::Manual);
-
-        new ColoredObject(ResourceKey{_resourceOffset + i}, materials[i], static_cast<Object3D*>(&(dartSkel->shapeObjects()[i]->object())), &_drawables);
-    }
-    _resourceOffset += objects.size();
+    _resourceOffset += dartSkel->shapeObjects().size();
 
     _dartObjs.emplace_back(dartObj);
     _dartSkels.emplace_back(dartSkel);
@@ -387,18 +376,18 @@ void DartExample::updateManipulator(dart::dynamics::SkeletonPtr skel) {
 dart::dynamics::SkeletonPtr DartExample::createNewDomino(Eigen::Vector6d position, double angle, double& totalAngle)
 {
     const double default_distance = default_domino_height / 2.0;
-    // Create a new domino
+    /* Create a new domino */
     dart::dynamics::SkeletonPtr newDomino = _dominoSkel->clone();
     newDomino->setName("domino #" + std::to_string(_dominoId++));
 
-    // // Compute the position for the new domino
+    /* Compute the position for the new domino */
     Eigen::Vector3d dx = default_distance * Eigen::Vector3d(
             std::cos(totalAngle), std::sin(totalAngle), 0.0);
 
     Eigen::Vector6d x = position;
     x.tail<3>() += dx;
 
-    // Adjust the angle for the new domino
+    /* Adjust the angle for the new domino */
     x[2] = totalAngle + angle;
     totalAngle += angle;
 
