@@ -78,7 +78,7 @@ find_package(MagnumIntegration REQUIRED
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
 add_executable(magnum-dart DartExample.cpp)
-target_include_directories(magnum-dart PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(magnum-dart PUBLIC ${DART_INCLUDE_DIRS} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(magnum-dart
     Magnum::Application
     Magnum::MeshTools
@@ -86,6 +86,7 @@ target_link_libraries(magnum-dart
     Magnum::SceneGraph
     Magnum::Primitives
     Magnum::Shaders
-    MagnumIntegration::Dart)
+    MagnumIntegration::Dart
+    ${DART_LIBRARIES})
 
 install(TARGETS magnum-dart DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
