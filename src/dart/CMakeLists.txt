@@ -56,6 +56,13 @@ else()
     set(DARTEXAMPLE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
+# We need the URDF loader of DART for this example
+find_package(DART REQUIRED OPTIONAL_COMPONENTS io-urdf utils-urdf)
+
+if(NOT (DART_utils-urdf_FOUND OR DART_io-urdf_FOUND) OR (DART_VERSION STRLESS 6.0.0))
+    message(FATAL_ERROR "DART version >= 6 and DART urdf library are required for this example!")
+endif()
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
                ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
 

@@ -34,7 +34,6 @@
 // #include <dart/collision/dart/DARTCollisionDetector.hpp>
 #include <dart/dart.hpp>
 #include <dart/dynamics/Skeleton.hpp>
-#include <dart/utils/urdf/urdf.hpp>
 
 #include <Magnum/DartIntegration/ConvertShapeNode.h>
 #include <Magnum/DartIntegration/DartSkeleton.h>
@@ -61,6 +60,15 @@
 #include <Magnum/Timeline.h>
 
 #include <configure.h>
+
+
+#if DART_MINOR_VERSION < 4
+    #include <dart/utils/urdf/urdf.hpp>
+    #define DartLoader dart::utils::DartLoader
+#else
+    #include <dart/io/urdf/urdf.hpp>
+    #define DartLoader dart::io::DartLoader
+#endif
 
 const double default_domino_height = 0.3;
 const double default_domino_width = 0.4 * default_domino_height;
@@ -185,7 +193,7 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
     _cameraObject->setTransformation(Magnum::Matrix4::lookAt(Vector3{0.f, 3.f, 1.f}, Vector3{0.f, 0.f, 0.5f}, Vector3{0.f, 0.f, 1.f}));
 
     /* DART: Load Skeleton */
-    dart::utils::DartLoader loader;
+    DartLoader loader;
     std::string filename = std::string(DARTEXAMPLE_DIR) + "/urdf/test.urdf";
     _manipulator = loader.parseSkeleton(filename);
     for(size_t i = 0; i < _manipulator->getNumJoints(); i++)
@@ -321,16 +329,16 @@ void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
     for (DartIntegration::DartObject& obj : dartSkel->shapeObjects()) {
         auto shape = obj.shapeNode()->getShape();
         Corrade::Utility::Debug{} << "Loading shape: "<< shape->getType();
-        auto visualData = DartIntegration::convertShapeNode(obj);
-        if (!visualData) {
+        auto shapeData = DartIntegration::convertShapeNode(obj);
+        if (!shapeData) {
             Corrade::Utility::Debug{} << "Could not convert Dart ShapeNode to Magnum data!";
         }
         else {
             MaterialData mat;
-            mat._ambientColor = visualData->_matData.ambientColor();
-            mat._diffuseColor = visualData->_matData.diffuseColor();
-            mat._specularColor = visualData->_matData.specularColor();
-            mat._shininess = visualData->_matData.shininess();
+            mat._ambientColor = shapeData->material.ambientColor();
+            mat._diffuseColor = shapeData->material.diffuseColor();
+            mat._specularColor = shapeData->material.specularColor();
+            mat._shininess = shapeData->material.shininess();
             
             if (mat._shininess < 1e-4f)
                 mat._shininess = 80.f;
@@ -338,7 +346,7 @@ void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
             /* Compile the mesh */
             Mesh mesh{NoCreate};
             std::unique_ptr<Buffer> buffer, indexBuffer;
-            std::tie(mesh, buffer, indexBuffer) = MeshTools::compile(visualData->_meshData, BufferUsage::DynamicDraw);
+            std::tie(mesh, buffer, indexBuffer) = MeshTools::compile(shapeData->mesh, BufferUsage::DynamicDraw);
 
             /* Save things */
             _resourceManager.set(ResourceKey{_resourceOffset + i}, new Mesh{std::move(mesh)}, ResourceDataState::Final, ResourcePolicy::Manual);
