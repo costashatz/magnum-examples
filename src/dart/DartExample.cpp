@@ -36,13 +36,12 @@
 #include <dart/dynamics/Skeleton.hpp>
 
 #include <Magnum/DartIntegration/ConvertShapeNode.h>
-#include <Magnum/DartIntegration/DartSkeleton.h>
+#include <Magnum/DartIntegration/World.h>
 
 #include <Magnum/Buffer.h>
 #include <Magnum/DefaultFramebuffer.h>
 #include <Magnum/Math/Constants.h>
 #include <Magnum/Mesh.h>
-#include <Magnum/MeshTools/Compile.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Renderer.h>
 #include <Magnum/ResourceManager.h>
@@ -51,18 +50,14 @@
 #include <Magnum/SceneGraph/MatrixTransformation3D.h>
 #include <Magnum/SceneGraph/Object.hpp>
 #include <Magnum/SceneGraph/SceneGraph.h>
-#include <Magnum/Trade/AbstractImporter.h>
-#include <Magnum/Trade/ImageData.h>
-#include <Magnum/Trade/MeshData3D.h>
 #include <Magnum/Trade/PhongMaterialData.h>
-#include <Magnum/Trade/TextureData.h>
 #include <Magnum/Shaders/Phong.h>
 #include <Magnum/Timeline.h>
 
 #include <configure.h>
 
 
-#if DART_MINOR_VERSION < 4
+#if DART_MAJOR_VERSION == 6
     #include <dart/utils/urdf/urdf.hpp>
     #define DartLoader dart::utils::DartLoader
 #else
@@ -109,11 +104,100 @@ inline dart::dynamics::SkeletonPtr createDomino()
     return domino;
 }
 
+/* Add a soft body with the specified Joint type to a chain */
+template<class JointType>
+dart::dynamics::BodyNode* addSoftBody(const dart::dynamics::SkeletonPtr& chain, const std::string& name, dart::dynamics::BodyNode* parent = nullptr)
+{
+    constexpr double default_shape_density = 1000; // kg/m^3
+    constexpr double default_shape_height  = 0.2;  // m
+    constexpr double default_shape_width   = 0.03; // m
+    constexpr double default_skin_thickness = 1e-2; // m
+
+    constexpr double default_vertex_stiffness = 1000.0;
+    constexpr double default_edge_stiffness = 1.0;
+    constexpr double default_soft_damping = 5.0;
+
+    /* Set the Joint properties */
+    typename JointType::Properties joint_properties;
+    joint_properties.mName = name+"_joint";
+    if(parent)
+    {
+        /* If the body has a parent, we should position the joint to be in the
+         * middle of the centers of the two bodies */
+        Eigen::Isometry3d tf(Eigen::Isometry3d::Identity());
+        tf.translation() = Eigen::Vector3d(0, 0, default_shape_height / 2.0);
+        joint_properties.mT_ParentBodyToJoint = tf;
+        joint_properties.mT_ChildBodyToJoint = tf.inverse();
+    }
+
+    /* Set the properties of the soft body */
+    dart::dynamics::SoftBodyNode::UniqueProperties soft_properties;
+    /* Make a wide and short box */
+    double width = default_shape_height, height = 2*default_shape_width;
+    Eigen::Vector3d dims(width, width, height);
+
+    double mass = 2*dims[0]*dims[1] + 2*dims[0]*dims[2] + 2*dims[1]*dims[2];
+    mass *= default_shape_density * default_skin_thickness;
+    soft_properties = dart::dynamics::SoftBodyNodeHelper::makeBoxProperties(dims, Eigen::Isometry3d::Identity(), Eigen::Vector3i(4,4,4), mass);
+
+    soft_properties.mKv = default_vertex_stiffness;
+    soft_properties.mKe = default_edge_stiffness;
+    soft_properties.mDampCoeff = default_soft_damping;
+
+    /* Create the Joint and Body pair */
+    dart::dynamics::SoftBodyNode::Properties body_properties(dart::dynamics::BodyNode::AspectProperties(name), soft_properties);
+    dart::dynamics::SoftBodyNode* bn = chain->createJointAndBodyNodePair<JointType, dart::dynamics::SoftBodyNode>(parent, joint_properties, body_properties).second;
+
+    /* Zero out the inertia for the underlying BodyNode */
+    // dart::dynamics::Inertia inertia;
+    // inertia.setMoment(1e-8*Eigen::Matrix3d::Identity());
+    // inertia.setMass(1e-8);
+    // bn->setInertia(inertia);
+
+    /* Add a rigid collision geometry and inertia */
+    Eigen::Vector3d dims_body(default_shape_height, default_shape_height, 2*default_shape_width);
+    dims_body *= 0.6;
+    std::shared_ptr<dart::dynamics::BoxShape> box = std::make_shared<dart::dynamics::BoxShape>(dims_body);
+    bn->createShapeNodeWith<dart::dynamics::VisualAspect, dart::dynamics::CollisionAspect, dart::dynamics::DynamicsAspect>(box);
+
+    dart::dynamics::Inertia inertia;
+    inertia.setMass(default_shape_density * box->getVolume());
+    inertia.setMoment(box->computeInertia(inertia.getMass()));
+    bn->setInertia(inertia);
+
+    return bn;
+}
+
 namespace Magnum { namespace Examples {
 
 typedef ResourceManager<Buffer, Mesh, Shaders::Phong> ViewerResourceManager;
 typedef SceneGraph::Object<SceneGraph::MatrixTransformation3D> Object3D;
 typedef SceneGraph::Scene<SceneGraph::MatrixTransformation3D> Scene3D;
+
+struct MaterialData{
+    Vector3 _ambientColor,
+            _diffuseColor,
+            _specularColor;
+    Float _shininess;
+};
+
+class ColoredObject: public Object3D, SceneGraph::Drawable3D {
+    public:
+        explicit ColoredObject(Mesh* mesh, const MaterialData& material, Object3D* parent, SceneGraph::DrawableGroup3D* group);
+
+        ColoredObject& setMesh(Mesh* mesh);
+        ColoredObject& setMaterial(const MaterialData& material);
+        ColoredObject& setSoftBody(bool softBody = true);
+
+    private:
+        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
+
+        Mesh* _mesh;
+        Resource<Shaders::Phong> _shader;
+        MaterialData _material;
+        bool _isSoftBody = false;
+};
+
 
 class DartExample: public Platform::Application {
     public:
@@ -124,7 +208,7 @@ class DartExample: public Platform::Application {
         void drawEvent() override;
         void keyPressEvent(KeyEvent& event) override;
 
-        void addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel);
+        void updateGraphics();
         void updateManipulator(dart::dynamics::SkeletonPtr skel);
         dart::dynamics::SkeletonPtr createNewDomino(Eigen::Vector6d position, double angle, double& totalAngle);
 
@@ -138,35 +222,16 @@ class DartExample: public Platform::Application {
         Object3D *_cameraRig, *_cameraObject;
 
         /* DART */
-        dart::simulation::WorldPtr _dartWorld;
-        std::vector<DartIntegration::DartSkeleton*> _dartSkels;
+        std::shared_ptr<DartIntegration::World> _dartWorld;
+        std::unordered_map<std::shared_ptr<DartIntegration::Object>, ColoredObject*> _coloredObjects;
         std::vector<Object3D*> _dartObjs;
-        size_t _resourceOffset, _dominoId;
+        size_t _dominoId;
         dart::dynamics::SkeletonPtr _manipulator, _dominoSkel;
 
         /* DART control */
         Eigen::VectorXd _desiredPositions;
         const double _pGain = 200.0;
         const double _dGain = 20.0;
-};
-
-struct MaterialData{
-    Vector3 _ambientColor,
-            _diffuseColor,
-            _specularColor;
-    Float _shininess;
-};
-
-class ColoredObject: public Object3D, SceneGraph::Drawable3D {
-    public:
-        explicit ColoredObject(ResourceKey meshId, const MaterialData& material, Object3D* parent, SceneGraph::DrawableGroup3D* group);
-
-    private:
-        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
-
-        Resource<Mesh> _mesh;
-        Resource<Shaders::Phong> _shader;
-        MaterialData _material;
 };
 
 DartExample::DartExample(const Arguments& arguments): Platform::Application(arguments, NoCreate) {
@@ -219,7 +284,7 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
 
     /* Give the body a shape */
     double floor_width = 10.0;
-    double floor_height = 0.01;
+    double floor_height = 0.02;
     std::shared_ptr<dart::dynamics::BoxShape> box(
             new dart::dynamics::BoxShape(Eigen::Vector3d(floor_width, floor_width, floor_height)));
     auto shapeNode
@@ -234,22 +299,18 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
     /* Create first domino */
     _dominoSkel = createDomino();
 
-    _dartWorld = dart::simulation::WorldPtr(new dart::simulation::World);
-    _dartWorld->addSkeleton(_manipulator);
-    _dartWorld->addSkeleton(floor);
-    _dartWorld->addSkeleton(_dominoSkel);
+    auto world = dart::simulation::WorldPtr(new dart::simulation::World);
+    world->addSkeleton(_manipulator);
+    world->addSkeleton(floor);
+    world->addSkeleton(_dominoSkel);
 
-    _dartWorld->setTimeStep(0.001);
+    world->setTimeStep(0.001);
 
-    // _dartWorld->getConstraintSolver()->setCollisionDetector(dart::collision::DARTCollisionDetector::create());
+    auto dartObj = new Object3D{&_scene};
+    _dartWorld = std::make_shared<DartIntegration::World>(*dartObj, world);
 
     /* Phong shader instance */
     _resourceManager.set("color", new Shaders::Phong);
-    _resourceOffset = 0;
-
-    addSkeletonToMagnum(_manipulator);
-    addSkeletonToMagnum(floor);
-    addSkeletonToMagnum(_dominoSkel);
 
     /* Add more dominoes for fun! */
     const double default_angle = 20.0 * M_PI / 180.0;
@@ -260,10 +321,19 @@ DartExample::DartExample(const Arguments& arguments): Platform::Application(argu
 
     for (int i = 0; i < 5; i++) {
         auto domino = createNewDomino(positions, default_angle, totalAngle);
-        _dartWorld->addSkeleton(domino);
-        addSkeletonToMagnum(domino);
+        world->addSkeleton(domino);
         positions = domino->getPositions();
     }
+
+    /* Create a soft body node in different location */
+    Eigen::Vector6d pos(Eigen::Vector6d::Zero());
+    // pos(4) = -0.5;
+    pos(5) = 0.5;
+    auto soft = dart::dynamics::Skeleton::create("soft");
+    addSoftBody<dart::dynamics::FreeJoint>(soft, "soft box");
+    soft->getJoint(0)->setPositions(pos);
+
+    // world->addSkeleton(soft);
 
     /* Loop at 60 Hz max */
     setSwapInterval(1);
@@ -281,6 +351,7 @@ void DartExample::viewportEvent(const Vector2i& size) {
 
 void DartExample::drawEvent() {
     defaultFramebuffer.clear(FramebufferClear::Color|FramebufferClear::Depth);
+    // Debug{}<<_timeline.previousFrameDuration();
 
     /* Step DART simulation */
     /* Need 15 steps as the time step in DART is 15 times smaller 60Hz */
@@ -288,11 +359,9 @@ void DartExample::drawEvent() {
         updateManipulator(_manipulator);
         _dartWorld->step();
     }
-    for (size_t i = 0; i < _dartSkels.size(); i++) {
-        _dartSkels[i]->updateObjects();
-    }
 
-    /* Update positions and render */
+    /* Update graphic meshes/materials and render */
+    updateGraphics();
     _camera->draw(_drawables);
 
     swapBuffers();
@@ -319,49 +388,35 @@ void DartExample::keyPressEvent(KeyEvent& event) {
     event.setAccepted();
 }
 
-void DartExample::addSkeletonToMagnum(dart::dynamics::SkeletonPtr skel) {
-    /* Create DartIntegration objects/skeletons */
-    auto dartObj = new Object3D{&_scene};
-    auto dartSkel = new DartIntegration::DartSkeleton{*dartObj, skel};
+void DartExample::updateGraphics() {
+    /* We refresh the graphical models only once per 60Hz */
+    _dartWorld->refresh();
 
-    /* Get visual data from them */
-    int i = 0;
-    for (DartIntegration::DartObject& obj : dartSkel->shapeObjects()) {
-        auto shape = obj.shapeNode()->getShape();
-        Corrade::Utility::Debug{} << "Loading shape: "<< shape->getType();
-        auto shapeData = DartIntegration::convertShapeNode(obj);
-        if (!shapeData) {
-            Corrade::Utility::Debug{} << "Could not convert Dart ShapeNode to Magnum data!";
+    for(auto& object : _dartWorld->updatedShapeObjects()){
+        MaterialData mat;
+        mat._ambientColor = object->shapeData().get().material.ambientColor();
+        mat._diffuseColor = object->shapeData().get().material.diffuseColor();
+        mat._specularColor = object->shapeData().get().material.specularColor();
+        mat._shininess = object->shapeData().get().material.shininess();
+
+        if (mat._shininess < 1e-4f)
+            mat._shininess = 80.f;
+
+        Mesh* mesh = object->shapeData().get().mesh;
+
+        auto it = _coloredObjects.insert(std::make_pair(object, nullptr));
+        if(it.second){
+            auto coloredObj = new ColoredObject(mesh, mat, static_cast<Object3D*>(&(object->object())), &_drawables);
+            if(object->shapeNode()->getShape()->getType() == dart::dynamics::SoftMeshShape::getStaticType())
+                coloredObj->setSoftBody();
+            it.first->second = coloredObj;
         }
         else {
-            MaterialData mat;
-            mat._ambientColor = shapeData->material.ambientColor();
-            mat._diffuseColor = shapeData->material.diffuseColor();
-            mat._specularColor = shapeData->material.specularColor();
-            mat._shininess = shapeData->material.shininess();
-            
-            if (mat._shininess < 1e-4f)
-                mat._shininess = 80.f;
-
-            /* Compile the mesh */
-            Mesh mesh{NoCreate};
-            std::unique_ptr<Buffer> buffer, indexBuffer;
-            std::tie(mesh, buffer, indexBuffer) = MeshTools::compile(shapeData->mesh, BufferUsage::DynamicDraw);
-
-            /* Save things */
-            _resourceManager.set(ResourceKey{_resourceOffset + i}, new Mesh{std::move(mesh)}, ResourceDataState::Final, ResourcePolicy::Manual);
-            _resourceManager.set(std::to_string(_resourceOffset + i) + "-vertices", buffer.release(), ResourceDataState::Final, ResourcePolicy::Manual);
-            if(indexBuffer)
-                _resourceManager.set(std::to_string(_resourceOffset + i) + "-indices", indexBuffer.release(), ResourceDataState::Final, ResourcePolicy::Manual);
-
-            new ColoredObject(ResourceKey{_resourceOffset + i}, mat, static_cast<Object3D*>(&(obj.object())), &_drawables);
+            it.first->second->setMesh(mesh).setMaterial(mat);
         }
-        i++;
     }
-    _resourceOffset += dartSkel->shapeObjects().size();
 
-    _dartObjs.emplace_back(dartObj);
-    _dartSkels.emplace_back(dartSkel);
+    _dartWorld->clearUpdatedShapeObjects();
 }
 
 void DartExample::updateManipulator(dart::dynamics::SkeletonPtr skel) {
@@ -400,13 +455,13 @@ dart::dynamics::SkeletonPtr DartExample::createNewDomino(Eigen::Vector6d positio
     totalAngle += angle;
 
     newDomino->setPositions(x);
-    
+
     return newDomino;
 }
 
-ColoredObject::ColoredObject(ResourceKey meshId, const MaterialData& material, Object3D* parent, SceneGraph::DrawableGroup3D* group):
+ColoredObject::ColoredObject(Mesh* mesh, const MaterialData& material, Object3D* parent, SceneGraph::DrawableGroup3D* group):
     Object3D{parent}, SceneGraph::Drawable3D{*this, group},
-    _mesh{ViewerResourceManager::instance().get<Mesh>(meshId)}, _shader{ViewerResourceManager::instance().get<Shaders::Phong>("color")}, _material(material) {}
+    _mesh{mesh}, _shader{ViewerResourceManager::instance().get<Shaders::Phong>("color")}, _material(material) {}
 
 void ColoredObject::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     _shader->setAmbientColor(_material._ambientColor)
@@ -418,7 +473,25 @@ void ColoredObject::draw(const Matrix4& transformationMatrix, SceneGraph::Camera
         .setNormalMatrix(transformationMatrix.rotation())
         .setProjectionMatrix(camera.projectionMatrix());
 
+    if(_isSoftBody)
+        Renderer::disable(Renderer::Feature::FaceCulling);
     _mesh->draw(*_shader);
+    if(_isSoftBody)
+        Renderer::enable(Renderer::Feature::FaceCulling);
+}
+
+
+ColoredObject& ColoredObject::setMesh(Mesh* mesh){
+    _mesh = mesh;
+    return *this;
+}
+ColoredObject& ColoredObject::setMaterial(const MaterialData& material){
+    _material = material;
+    return *this;
+}
+ColoredObject& ColoredObject::setSoftBody(bool softBody){
+    _isSoftBody = softBody;
+    return *this;
 }
 
 }}
