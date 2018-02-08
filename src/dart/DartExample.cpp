@@ -35,7 +35,6 @@
 #include <dart/dart.hpp>
 #include <dart/dynamics/Skeleton.hpp>
 
-#include <Magnum/DartIntegration/ConvertShapeNode.h>
 #include <Magnum/DartIntegration/World.h>
 
 #include <Magnum/Buffer.h>
