@@ -393,15 +393,15 @@ void DartExample::updateGraphics() {
 
     for(auto& object : _dartWorld->updatedShapeObjects()){
         MaterialData mat;
-        mat._ambientColor = object->shapeData().get().material.ambientColor();
-        mat._diffuseColor = object->shapeData().get().material.diffuseColor();
-        mat._specularColor = object->shapeData().get().material.specularColor();
-        mat._shininess = object->shapeData().get().material.shininess();
+        mat._ambientColor = object->shapeData().get().materials[0]->ambientColor();
+        mat._diffuseColor = object->shapeData().get().materials[0]->diffuseColor();
+        mat._specularColor = object->shapeData().get().materials[0]->specularColor();
+        mat._shininess = object->shapeData().get().materials[0]->shininess();
 
         if (mat._shininess < 1e-4f)
             mat._shininess = 80.f;
 
-        Mesh* mesh = object->shapeData().get().mesh;
+        Mesh* mesh = object->shapeData().get().meshes[0];
 
         auto it = _coloredObjects.insert(std::make_pair(object, nullptr));
         if(it.second){
