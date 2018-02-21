@@ -157,9 +157,9 @@ VoxelConeTracingExample::VoxelConeTracingExample(const Arguments& arguments):
     ObjectMaterial material;
     material.material.diffuseColor = Vector3(0.2f, 0.0f, 0.8f);
     material.material.specularColor = Vector3(1.f);
-    material.material.specularDiffusion = 2.f;
+    material.material.specularDiffusion = 0.2f;
     material.material.diffuseReflectivity = 1.f;
-    material.material.specularReflectivity = 0.f;
+    material.material.specularReflectivity = 0.2f;
     material.material.emissivity = 0.f;
     material.material.refractiveIndex = 1.4f;
     material.material.transparency = 0.f;
@@ -168,8 +168,8 @@ VoxelConeTracingExample::VoxelConeTracingExample(const Arguments& arguments):
     // material.settings.indirectDiffuseLight = true;
     // material.settings.directLight = true;
     // material.settings.shadows = true;
-    material.settings.indirectSpecularLight = true;
-    material.settings.indirectDiffuseLight = true;
+    material.settings.indirectSpecularLight = false;
+    material.settings.indirectDiffuseLight = false;
     material.settings.directLight = true;
     material.settings.shadows = true;
 
@@ -190,7 +190,7 @@ VoxelConeTracingExample::VoxelConeTracingExample(const Arguments& arguments):
     // _voxelConeTracingShader->setVoxelTexture(*_voxelTexture);
 
     /* add one light to the scene */
-    _light.position = Vector3{0.2f, 0.3f, 0.f}; //Vector3{-3.0f, 10.0f, 10.0f};
+    _light.position = Vector3{0.f, 0.5f, 0.f}; //Vector3{-3.0f, 10.0f, 10.0f};
     _light.color = Vector3{1.0f, 1.0f, 1.0f};
     // _voxelizationShader->setNumberOfLights(1).setLight(0, light);
     // _voxelConeTracingShader->setNumberOfLights(1).setLight(0, light);
@@ -226,8 +226,9 @@ VoxelConeTracingExample::VoxelConeTracingExample(const Arguments& arguments):
     auto obj2 = new Object3D{&_scene};
     obj2->translate(Vector3{0.f, -0.15f, 0.f});
     ObjectMaterial material2 = material;
-    material2.material.diffuseColor = Vector3(0.f, 0.6f, 0.f);
-    // material2.material.emissivity = 8.f;
+    material2.material.diffuseColor = Vector3(1.f, 1.f, 1.f);
+    material2.material.emissivity = 0.f;
+    material.material.specularReflectivity = 1.f;
     new VoxelizationObject(mp2, vb2, ib2, material2, _voxelizationShader, obj2, &_voxels, *_voxelTexture, _light);
     new VoxelConeTracingObject(mp2, vb2, ib2, material2, _voxelConeTracingShader, obj2, &_voxelTracers, *_voxelTexture, _light);
 }

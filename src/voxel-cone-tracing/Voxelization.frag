@@ -8,7 +8,7 @@
 // #define MAX_LIGHTS 1
 
 // Lighting attenuation factors.
-#define DIST_FACTOR 1.1f /* Distance is multiplied by this when calculating attenuation. */
+#define DIST_FACTOR 1f /* Distance is multiplied by this when calculating attenuation. */
 #define CONSTANT 1
 #define LINEAR 0
 #define QUADRATIC 1

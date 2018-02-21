@@ -41,7 +41,7 @@
 // #define QUADRATIC 0
 
 // Other settings.
-#define GAMMA_CORRECTION 1 /* Whether to use gamma correction or not. */
+#define GAMMA_CORRECTION 0 /* Whether to use gamma correction or not. */
 
 // Basic point light.
 struct PointLight {
