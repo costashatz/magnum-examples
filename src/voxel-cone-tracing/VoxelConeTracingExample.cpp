@@ -171,7 +171,7 @@ VoxelConeTracingExample::VoxelConeTracingExample(const Arguments& arguments):
     material.settings.indirectSpecularLight = true;
     material.settings.indirectDiffuseLight = true;
     material.settings.directLight = true;
-    material.settings.shadows = false;
+    material.settings.shadows = true;
 
     /* Default object, parent of all (for manipulation) */
     _o = new Object3D{&_scene};
@@ -181,7 +181,7 @@ VoxelConeTracingExample::VoxelConeTracingExample(const Arguments& arguments):
     _voxelTexture = std::unique_ptr<Texture3D>(new Texture3D);
     _voxelTexture->setMagnificationFilter(Sampler::Filter::Nearest)
                   .setMinificationFilter(Sampler::Filter::Linear, Sampler::Mipmap::Linear)
-                  .setWrapping(Sampler::Wrapping::ClampToEdge)
+                  .setWrapping(Sampler::Wrapping::ClampToBorder)
                   .setStorage(7, TextureFormat::RGBA8, {64, 64, 64})
                   .setSubImage(0, {}, image)
                   .generateMipmap();
@@ -262,6 +262,29 @@ void VoxelConeTracingExample::drawEvent() {
     /* restore renderer/framebuffer */
     defaultFramebuffer.setViewport({{}, viewportSize});
     _camera->setViewport(viewportSize);
+
+    // Renderer::setMemoryBarrier(Renderer::MemoryBarrier::TextureUpdate);
+
+    // Image3D imageRead{PixelFormat::RGBA, PixelType::Float, {64, 64, 64}, Containers::Array<char>{Math::pow<3>(64)*16}};
+    // _voxelTexture->subImage(0, {}, imageRead);
+    // auto data = Containers::arrayCast<Vector4>(imageRead.data());
+    // for(Vector4& v: data) {
+    //     if(v.length()>0.0001)
+    //         Debug{} << v;
+    // }
+
+    // Image3D imageRead{PixelFormat::RGBA, PixelType::UnsignedByte, {64, 64, 64}, Containers::Array<char>{Math::pow<3>(64)*4}};
+    // _voxelTexture->subImage(0, {}, imageRead);
+    // auto data = Containers::arrayCast<Color4ub>(imageRead.data());
+    // for(UnsignedInt i = 0; i < 64; i++) {
+    //     for(UnsignedInt j = 0; j < 64; j++) {
+    //         for(UnsignedInt k = 0; k < 64; k++) {
+    //             Color4ub rgba = data[i*64*64 + j*64 + k];
+    //             if(!rgba.isZero())
+    //                 Debug{} << rgba;
+    //         }
+    //     }
+    // }
 
     Renderer::setColorMask(true, true, true, true);
     Renderer::enable(Renderer::Feature::DepthTest);

@@ -74,7 +74,7 @@ uniform PointLight pointLights[MAX_LIGHTS];
 uniform int numberOfLights; // Number of lights currently uploaded.
 uniform vec3 cameraPosition; // World campera position.
 uniform int state; // Only used for testing / debugging.
-uniform sampler3D texture3D; // Voxelization texture.
+layout(binding = 0) uniform sampler3D texture3D; // Voxelization texture.
 
 in vec3 worldPositionFrag;
 in vec3 normalFrag;

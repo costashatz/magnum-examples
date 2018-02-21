@@ -35,7 +35,7 @@ uniform Material material;
 uniform PointLight pointLights[MAX_LIGHTS];
 uniform int numberOfLights;
 // uniform vec3 cameraPosition;
-layout(RGBA8) uniform image3D texture3D;
+layout(binding = 0, RGBA8) uniform image3D texture3D;
 
 in vec3 worldPositionFrag;
 in vec3 normalFrag;
