@@ -34,7 +34,7 @@
 // #define MAX_LIGHTS 1 /* Maximum number of lights supported. */
 
 // Lighting attenuation factors. See the function "attenuate" (below) for more information.
-#define DIST_FACTOR 1.1f /* Distance is multiplied by this when calculating attenuation. */
+#define DIST_FACTOR 1.f /* Distance is multiplied by this when calculating attenuation. */
 #define CONSTANT 1
 #define LINEAR 0 /* Looks meh when using gamma correction. */
 #define QUADRATIC 1

@@ -72,6 +72,7 @@ class VoxelBaseShader: public AbstractShaderProgram {
         VoxelBaseShader& setNumberOfLights(Int numLights);
 
         VoxelBaseShader& setVoxelTexture(Texture3D& texture);
+        VoxelBaseShader& bindVoxelTexture(Texture3D& texture);
 
     protected:
         Int _maxLights;

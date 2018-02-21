@@ -263,29 +263,6 @@ void VoxelConeTracingExample::drawEvent() {
     defaultFramebuffer.setViewport({{}, viewportSize});
     _camera->setViewport(viewportSize);
 
-    // Renderer::setMemoryBarrier(Renderer::MemoryBarrier::TextureUpdate);
-
-    // Image3D imageRead{PixelFormat::RGBA, PixelType::Float, {64, 64, 64}, Containers::Array<char>{Math::pow<3>(64)*16}};
-    // _voxelTexture->subImage(0, {}, imageRead);
-    // auto data = Containers::arrayCast<Vector4>(imageRead.data());
-    // for(Vector4& v: data) {
-    //     if(v.length()>0.0001)
-    //         Debug{} << v;
-    // }
-
-    // Image3D imageRead{PixelFormat::RGBA, PixelType::UnsignedByte, {64, 64, 64}, Containers::Array<char>{Math::pow<3>(64)*4}};
-    // _voxelTexture->subImage(0, {}, imageRead);
-    // auto data = Containers::arrayCast<Color4ub>(imageRead.data());
-    // for(UnsignedInt i = 0; i < 64; i++) {
-    //     for(UnsignedInt j = 0; j < 64; j++) {
-    //         for(UnsignedInt k = 0; k < 64; k++) {
-    //             Color4ub rgba = data[i*64*64 + j*64 + k];
-    //             if(!rgba.isZero())
-    //                 Debug{} << rgba;
-    //         }
-    //     }
-    // }
-
     Renderer::setColorMask(true, true, true, true);
     Renderer::enable(Renderer::Feature::DepthTest);
     Renderer::enable(Renderer::Feature::FaceCulling);
@@ -392,7 +369,7 @@ void VoxelConeTracingObject::draw(const Matrix4&, SceneGraph::Camera3D& camera) 
            .setMaterial(_material.material)
            .setMaterialSettings(_material.settings)
            .setModelMatrix(absoluteTransformationMatrix())
-           .setVoxelTexture(_voxelTexture)
+           .bindVoxelTexture(_voxelTexture)
            .setNumberOfLights(1)
            .setLight(0, _light);
 

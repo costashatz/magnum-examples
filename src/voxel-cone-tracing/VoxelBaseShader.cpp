@@ -103,10 +103,16 @@ VoxelBaseShader& VoxelBaseShader::setNumberOfLights(Int numLights) {
 VoxelBaseShader& VoxelBaseShader::setVoxelTexture(Texture3D& texture) {
     Int texUnit = 0;
     /* unit, level, access, format */
-    // texture.bindImageLayered(texUnit, 0, ImageAccess::WriteOnly, ImageFormat::RGBA8);
-    texture.bindImageLayered(texUnit, 0, ImageAccess::ReadWrite, ImageFormat::RGBA8);
+    texture.bindImageLayered(texUnit, 0, ImageAccess::WriteOnly, ImageFormat::RGBA8);
     /* unit */
     setUniform(_texture3DUniform, texUnit);
+    return *this;
+}
+
+VoxelBaseShader& VoxelBaseShader::bindVoxelTexture(Texture3D& texture) {
+    Int texUnit = 0;
+    /* unit, level, access, format */
+    texture.bind(texUnit);
     return *this;
 }
 
