@@ -3,20 +3,20 @@
 
 /* Camera model */
 struct Camera {
-	vec4 pos;
-    vec4 dir;
-    vec4 yAxis;
-    vec4 xAxis;
-	float tanFovY;
+    vec3 pos;
+    vec3 dir;
+    vec3 yAxis;
+    vec3 xAxis;
+    float tanFovY;
     float tanFovX;
 };
 
 /* Material model */
 struct Material {
-	vec4 diffuse;
-	vec4 specular;
-	vec4 emission;
-	float shininess;
+    vec4 diffuse;
+    vec4 specular;
+    vec4 emission;
+    float shininess;
     /* todo: add refraction once first draft is working */
     /* todo: add textures once first draft is working */
 };
@@ -25,7 +25,7 @@ struct Material {
 /* vec4 for layout thing */
 struct Triangle {
     /* vertices of triangle */
-	vec4 A;
+    vec4 A;
     vec4 B;
     vec4 C;
     /* todo: maybe include normal vectors as well */
@@ -34,14 +34,14 @@ struct Triangle {
 
 /* Triangle object */
 struct Object {
-	Triangle triangle;
-	int materialIndex;
+    Triangle triangle;
+    int materialIndex;
 };
 
 /* Ray model */
 struct Ray {
-	vec3 origin;
-	vec3 dir;
+    vec3 origin;
+    vec3 dir;
 };
 
 /* Light model */
@@ -62,26 +62,26 @@ struct Light {
 
 /* GPU buffers with objects, materials and lights */
 layout(std430, binding = 3) buffer ObjectBuffer {
-	Object objects[];
+    Object objects[];
 };
 
 layout(std430, binding = 4) buffer MaterialBuffer {
-	Material materials[];
+    Material materials[];
 };
 
 layout(std430, binding = 5) buffer LightBuffer {
-	Light lights[];
+    Light lights[];
 };
 
 /* camera */
-uniform Camera camera;
+layout(location = 0) uniform Camera camera;
 /* viewport */
-uniform uint width;
-uniform uint height;
+layout(location = 6) uniform uint width = 640;
+layout(location = 7) uniform uint height = 480;
 /* scene stats */
-uniform uint numOfObjects;
-uniform uint numOfLights;
-uniform uint reflectionDepth;
+layout(location = 8) uniform uint numOfObjects = 0;
+layout(location = 9) uniform uint numOfLights = 0;
+layout(location = 10) uniform uint reflectionDepth = 2;
 
 /* output image */
 layout(binding = 6) writeonly uniform image2D outputImage;
@@ -89,14 +89,14 @@ layout(binding = 6) writeonly uniform image2D outputImage;
 /* triangle ray-tracing */
 /* todo: check if this is correct */
 float traceTriangle(Ray r, Triangle t) {
-	vec3 AB = t.B.xyz - t.A.xyz;
-	vec3 AC = t.C.xyz - t.A.xyz;
+    vec3 AB = t.B.xyz - t.A.xyz;
+    vec3 AC = t.C.xyz - t.A.xyz;
 
-	float det = determinant(mat3(AB, AC, -1. * r.dir));
+    float det = determinant(mat3(AB, AC, -1. * r.dir));
 
-	if(det == 0.0){
-		return FAR_CLIP;
-	}
+    if(det == 0.0){
+        return FAR_CLIP;
+    }
 
     vec3 oA = r.origin - t.A.xyz;
 
@@ -115,36 +115,36 @@ float traceTriangle(Ray r, Triangle t) {
 
 /* initial ray from camera and screen point */
 Ray initRay(uint x, uint y, Camera cam) {
-	Ray r;
-	vec3 dir;
-	float a, b, halfWidth, halfHeight;
+    Ray r;
+    vec3 dir;
+    float a, b, halfWidth, halfHeight;
 
-	halfWidth = float(width) / 2.;
-	halfHeight = float(height) / 2.;
+    halfWidth = float(width) / 2.;
+    halfHeight = float(height) / 2.;
 
-	a = cam.tanFovX * ((float(x)-halfWidth+0.5) / halfWidth);
-	b = cam.tanFovY * ((halfHeight - float(y)-0.5) / halfHeight);
+    a = cam.tanFovX * ((float(x)-halfWidth+0.5) / halfWidth);
+    b = cam.tanFovY * ((halfHeight - float(y)-0.5) / halfHeight);
 
-	dir = normalize(a * cam.xAxis.xyz + b * cam.yAxis.xyz + cam.dir.xyz);
+    dir = normalize(a * cam.xAxis + b * cam.yAxis + cam.dir);
 
-	r.dir = dir;
-	r.origin = cam.pos.xyz;
+    r.dir = dir;
+    r.origin = cam.pos;
 
-	return r;
+    return r;
 }
 
 /* reflection ray */
 Ray getReflectionRay(Ray r, int currentObject, float t) {
-	vec3 hitPoint = r.origin + r.dir * t;
-	vec3 N = normalize(cross((objects[currentObject].triangle.B - objects[currentObject].triangle.A).xyz,
-								(objects[currentObject].triangle.C - objects[currentObject].triangle.A).xyz));
+    vec3 hitPoint = r.origin + r.dir * t;
+    vec3 N = normalize(cross((objects[currentObject].triangle.B - objects[currentObject].triangle.A).xyz,
+                                (objects[currentObject].triangle.C - objects[currentObject].triangle.A).xyz));
 
-	vec3 dir = normalize(r.dir - 2 * dot(r.dir, N) * N);
-	Ray ray;
+    vec3 dir = normalize(r.dir - 2 * dot(r.dir, N) * N);
+    Ray ray;
     ray.origin = hitPoint + dir * 0.01;
     ray.dir = dir;
 
-	return ray;
+    return ray;
 }
 
 /* get light brightness/attenuation */
@@ -203,7 +203,7 @@ bool intersected(Light light, float tHit, vec3 previousHitPoint) {
 /* calculate color of at ray/triangle intersection */
 vec4 calculateColor(Ray r, float t, int currentObject) {
     /* todo: add only rgb components; see what to do with alpha */
-	vec4 color = vec4(0., 0., 0., 1.);
+    vec4 color = vec4(0., 0., 0., 1.);
 
     int matIndex = objects[currentObject].materialIndex;
 
@@ -219,7 +219,7 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
     /* hitPoint and normal (N) */
     vec3 hitPoint = r.origin + t * r.dir;
     vec3 N = normalize(cross((objects[currentObject].triangle.B - objects[currentObject].triangle.A).xyz, 
-									(objects[currentObject].triangle.C - objects[currentObject].triangle.A).xyz));
+                                    (objects[currentObject].triangle.C - objects[currentObject].triangle.A).xyz));
     
     hitPoint += 0.01 * N;
 
@@ -253,7 +253,7 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
             vec4 diffuseReflection = attenuation * lights[i].diffuse * mat.diffuse * intensity;
 
             vec3 reflection = reflect(-normalizedLightDirection, N);
-            float specularity = pow(max(0.0, dot(normalize(camera.pos.xyz - hitPoint), reflection)), mat.shininess);
+            float specularity = pow(max(0.0, dot(normalize(camera.pos - hitPoint), reflection)), mat.shininess);
             vec4 specularReflection = attenuation * lights[i].specular * mat.specular * specularity;
 
             color += diffuseReflection + specularReflection;
@@ -269,8 +269,8 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
 /* do the actual work */
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main(){
-	uint x = gl_GlobalInvocationID.x;
-	uint y = gl_GlobalInvocationID.y;
+    uint x = gl_GlobalInvocationID.x;
+    uint y = gl_GlobalInvocationID.y;
 
     /* sanity check */
     if(x >= width || y >= height)

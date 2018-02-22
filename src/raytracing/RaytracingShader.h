@@ -22,10 +22,10 @@
 */
 
 #include "Magnum/AbstractShaderProgram.h"
-#include "Magnum/Math/Color.h"
-#include "Magnum/Math/Matrix4.h"
 #include "Magnum/Shaders/Generic.h"
 #include "Magnum/Shaders/visibility.h"
+
+#include "RaytracingTypes.h"
 
 namespace Magnum { namespace Examples {
 
@@ -36,8 +36,61 @@ class RaytracingShader: public AbstractShaderProgram {
 
         explicit RaytracingShader(NoCreateT) noexcept: AbstractShaderProgram{NoCreate} {}
 
-    // private:
-        // Int _uniform;
+        RaytracingShader& setCamera(const Camera& camera) {
+            setUniform(_cameraUniform, camera.pos);
+            setUniform(_cameraUniform + 1, camera.dir);
+            setUniform(_cameraUniform + 2, camera.yAxis);
+            setUniform(_cameraUniform + 3, camera.xAxis);
+            setUniform(_cameraUniform + 4, camera.tanFovY);
+            setUniform(_cameraUniform + 5, camera.tanFovX);
+            return *this;
+        }
+
+        RaytracingShader& setViewport(Int width, Int height) {
+            setUniform(_widthUniform, width);
+            setUniform(_heightUniform, height);
+            return *this;
+        }
+
+        RaytracingShader& setNumObjects(Int numObjects) {
+            setUniform(_numObjectsUniform, numObjects);
+            return *this;
+        }
+
+        RaytracingShader& setNumLights(Int numLights) {
+            setUniform(_numLightsUniform, numLights);
+            return *this;
+        }
+
+        RaytracingShader& setReflectionDepth(Int depth) {
+            setUniform(_reflectionDepthUniform, depth);
+            return *this;
+        }
+
+        RaytracingShader& setSceneParams(Int numObjects, Int numLights, Int depth) {
+            this->setNumObjects(numObjects)
+                .setNumLights(numLights)
+                .setReflectionDepth(depth);
+            return *this;
+        }
+
+        Int objectBufferBindLocation() { return _objectBufferBindLocation; }
+        Int materialBufferBindLocation() { return _materialBufferBindLocation; }
+        Int lightBufferBindLocation() { return _lightBufferBindLocation; }
+
+        RaytracingShader& setOutputTexture(Texture2D& texture);
+
+    private:
+        Int _cameraUniform{0},
+            _widthUniform{6},
+            _heightUniform{7},
+            _numObjectsUniform{8},
+            _numLightsUniform{9},
+            _reflectionDepthUniform{10};
+        Int _objectBufferBindLocation{3},
+            _materialBufferBindLocation{4},
+            _lightBufferBindLocation{5},
+            _outputTextureBindLocation{6};
 };
 
 }}

@@ -1,3 +1,5 @@
+#ifndef Magnum_Shaders_RaytracingTypes_h
+#define Magnum_Shaders_RaytracingTypes_h
 /*
     This file is part of Magnum.
     Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
@@ -19,34 +21,63 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "RaytracingShader.h"
-
-#include <Corrade/Utility/Resource.h>
-
-#include "Magnum/Context.h"
-#include "Magnum/Extensions.h"
-#include "Magnum/Shader.h"
-#include "Magnum/Texture.h"
+#include "Magnum/Magnum.h"
+#include "Magnum/Math/Color.h"
+#include "Magnum/Math/Vector3.h"
 
 namespace Magnum { namespace Examples {
 
-RaytracingShader::RaytracingShader() {
-    Utility::Resource rs("RaytracingShaders");
+/* Camera model */
+struct Camera {
+	Vector3 pos;
+    Vector3 dir;
+    Vector3 yAxis;
+    Vector3 xAxis;
+	Float tanFovY;
+    Float tanFovX;
+};
 
-    Shader compute{Version::GL430, Shader::Type::Compute};
+/* Material model */
+struct Material {
+	Color4 diffuse;
+	Color4 specular;
+	Color4 emission;
+	Float shininess;
+    /* todo: add refraction once first draft is working */
+    /* todo: add textures once first draft is working */
+};
 
-    compute.addSource(rs.get("RaytracingShader.comp"));
+/* assume counter-clockwise direction for normal */
+struct Triangle {
+    /* vertices of triangle */
+	Vector3 A;
+    Vector3 B;
+    Vector3 C;
+    /* todo: maybe include normal vectors as well */
+    /* todo: maybe include texture coordinates */
+};
 
-    CORRADE_INTERNAL_ASSERT_OUTPUT(Shader::compile({compute}));
+/* Triangle object */
+struct Object {
+	Triangle triangle;
+	Int materialIndex;
+};
 
-    attachShaders({compute});
-
-    CORRADE_INTERNAL_ASSERT_OUTPUT(link());
-}
-
-RaytracingShader& RaytracingShader::setOutputTexture(Texture2D& texture) {
-    texture.bind(_outputTextureBindLocation);
-    return *this;
-}
+/* Light model */
+struct Light {
+    Vector4 position;
+    Color4 ambient;
+    Color4 diffuse;
+    Color4 specular;
+    Vector3 spotDirection;
+    Float spotExponent;
+    Float spotCutoff;
+    Float intensity;
+    Float constantAttenuation;
+    Float linearAttenuation;
+    Float quadraticAttenuation;
+};
 
 }}
+
+#endif

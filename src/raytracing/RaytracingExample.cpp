@@ -68,11 +68,9 @@ class RaytracingExample: public Platform::Application {
         SceneGraph::DrawableGroup3D _drawables;
         Vector3 _previousPosition;
         SimpleShader _shader;
-
-        Buffer _shaderBuffer;
 };
 
-struct Material {
+struct SimpleMaterial {
     Vector3 ambientColor,
             diffuseColor,
             specularColor;
@@ -81,7 +79,7 @@ struct Material {
 
 class ColoredObject: public Object3D, SceneGraph::Drawable3D {
     public:
-        explicit ColoredObject(Mesh mesh, Buffer vertexBuffer, Buffer indexBuffer, SimpleShader& shader, const Material& material, Object3D* parent, SceneGraph::DrawableGroup3D* group) : Object3D{parent}, SceneGraph::Drawable3D{*this, group}, _mesh(std::move(mesh)), _vertexBuffer(std::move(vertexBuffer)), _indexBuffer(std::move(indexBuffer)), _shader{shader}, _material(material) {}
+        explicit ColoredObject(Mesh mesh, Buffer vertexBuffer, Buffer indexBuffer, SimpleShader& shader, const SimpleMaterial& material, Object3D* parent, SceneGraph::DrawableGroup3D* group) : Object3D{parent}, SceneGraph::Drawable3D{*this, group}, _mesh(std::move(mesh)), _vertexBuffer(std::move(vertexBuffer)), _indexBuffer(std::move(indexBuffer)), _shader{shader}, _material(material) {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override {
@@ -101,7 +99,7 @@ class ColoredObject: public Object3D, SceneGraph::Drawable3D {
         Mesh _mesh;
         Buffer _vertexBuffer, _indexBuffer;
         SimpleShader& _shader;
-        Material _material;
+        SimpleMaterial _material;
 };
 
 RaytracingExample::RaytracingExample(const Arguments& arguments):
@@ -133,26 +131,11 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     std::unique_ptr<Buffer> vertexBuffer, indexBuffer;
     std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(cube, BufferUsage::StaticDraw);
 
-    Material material;
+    SimpleMaterial material;
     material.ambientColor = Vector3{0.f, 0.f, 0.f};
     material.diffuseColor = Vector3{0.3f, 0.3f, 0.f};
     material.specularColor = Vector3{1.f};
     material.shininess = 80.f;
-
-    // struct Object{
-    //     Vector3 position;
-    // };
-
-    // std::vector<Object> data;
-    // Object ob1, ob2, ob3;
-    // ob1.position = Vector3{1.f, 0.f, 0.f};
-    // ob2.position = Vector3{0.f, 1.f, 0.f};
-    // ob3.position = Vector3{0.f, 0.f, 1.f};
-    // data.push_back(ob1);
-    // data.push_back(ob2);
-    // data.push_back(ob3);
-    // _shaderBuffer.setData(data, BufferUsage::DynamicCopy);
-    // _shaderBuffer.bind(Buffer::Target::ShaderStorage, 3);
 
     new ColoredObject(std::move(mesh), std::move(*vertexBuffer.release()), std::move(*indexBuffer.release()), _shader, material, _o, &_drawables);
 }
