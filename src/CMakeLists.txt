@@ -94,6 +94,10 @@ if(WITH_VIEWER_EXAMPLE)
     add_subdirectory(viewer)
 endif()
 
+if(WITH_RAYTRACING_EXAMPLE)
+    add_subdirectory(raytracing)
+endif()
+
 if(WITH_WEBVR_EXAMPLE)
     add_subdirectory(webvr)
 endif()
