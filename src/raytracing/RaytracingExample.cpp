@@ -27,11 +27,20 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Utility/Resource.h>
+
 #include <Magnum/Buffer.h>
+#include <Magnum/Context.h>
 #include <Magnum/DefaultFramebuffer.h>
+#include <Magnum/Extensions.h>
+#include <Magnum/Image.h>
 #include <Magnum/Mesh.h>
+#include <Magnum/PixelFormat.h>
 #include <Magnum/Renderer.h>
-#include <Magnum/MeshTools/Compile.h>
+#include <Magnum/Shader.h>
+#include <Magnum/Texture.h>
+#include <Magnum/TextureFormat.h>
+#include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Primitives/Cube.h>
 #include <Magnum/SceneGraph/Camera.h>
@@ -40,13 +49,42 @@
 #include <Magnum/SceneGraph/Scene.h>
 #include <Magnum/Trade/MeshData3D.h>
 
-#include "SimpleShader.h"
 #include "RaytracingShader.h"
 
 namespace Magnum { namespace Examples {
 
 typedef SceneGraph::Object<SceneGraph::MatrixTransformation3D> Object3D;
 typedef SceneGraph::Scene<SceneGraph::MatrixTransformation3D> Scene3D;
+
+class RenderTextureShader: public AbstractShaderProgram {
+    public:
+
+        explicit RenderTextureShader() {
+            Utility::Resource rs("RaytracingShaders");
+
+            Shader vert{Version::GL430, Shader::Type::Vertex};
+            Shader frag{Version::GL430, Shader::Type::Fragment};
+
+            vert.addSource(rs.get("RenderTextureShader.vert"));
+            frag.addSource(rs.get("RenderTextureShader.frag"));
+
+            CORRADE_INTERNAL_ASSERT_OUTPUT(Shader::compile({vert, frag}));
+
+            attachShaders({vert, frag});
+
+            CORRADE_INTERNAL_ASSERT_OUTPUT(link());
+        }
+
+        explicit RenderTextureShader(NoCreateT) noexcept: AbstractShaderProgram{NoCreate} {}
+
+        RenderTextureShader& setOutputTexture(Texture2D& texture) {
+            texture.bind(_outputTextureBindLocation);
+            return *this;
+        }
+
+    private:
+        Int _outputTextureBindLocation{0};
+};
 
 class RaytracingExample: public Platform::Application {
     public:
@@ -61,45 +99,35 @@ class RaytracingExample: public Platform::Application {
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
         Vector3 positionOnSphere(const Vector2i& _position) const;
+        void refreshTexture(const Vector2i& size);
 
         Scene3D _scene;
         Object3D *_o, *_cameraObject;
         SceneGraph::Camera3D* _camera;
         SceneGraph::DrawableGroup3D _drawables;
         Vector3 _previousPosition;
-        SimpleShader _shader;
-};
 
-struct SimpleMaterial {
-    Vector3 ambientColor,
-            diffuseColor,
-            specularColor;
-    Float shininess;
+        RenderTextureShader _renderShader;
+        RaytracingShader _rayShader;
+        UnsignedInt _width, _height;
+        UnsignedInt _workgroupSize = 20;
+        Buffer _objectsBuffer;
+        Buffer _materialsBuffer;
+        Buffer _lightsBuffer;
+        Texture2D _outputImage;
 };
 
 class ColoredObject: public Object3D, SceneGraph::Drawable3D {
     public:
-        explicit ColoredObject(Mesh mesh, Buffer vertexBuffer, Buffer indexBuffer, SimpleShader& shader, const SimpleMaterial& material, Object3D* parent, SceneGraph::DrawableGroup3D* group) : Object3D{parent}, SceneGraph::Drawable3D{*this, group}, _mesh(std::move(mesh)), _vertexBuffer(std::move(vertexBuffer)), _indexBuffer(std::move(indexBuffer)), _shader{shader}, _material(material) {}
+        explicit ColoredObject(const std::vector<Examples::Object>& objects, Buffer& objectsBuffer, Object3D* parent, SceneGraph::DrawableGroup3D* group) : Object3D{parent}, SceneGraph::Drawable3D{*this, group}, _objects(std::move(objects)), _objectsBuffer{objectsBuffer} {}
 
     private:
-        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override {
-            _shader.setAmbientColor(_material.ambientColor)
-                .setDiffuseColor(_material.diffuseColor)
-                .setSpecularColor(_material.specularColor)
-                .setShininess(_material.shininess)
-                .setLightPosition({-3.0f, 10.0f, 10.0f})
-                .setCameraMatrix(camera.cameraMatrix())
-                .setTransformationMatrix(transformationMatrix)
-                .setNormalMatrix(transformationMatrix.rotation())
-                .setProjectionMatrix(camera.projectionMatrix());
-
-            _mesh.draw(_shader);
+        void draw(const Matrix4& /* transformationMatrix */, SceneGraph::Camera3D& /* camera */) override {
+            /* @todo: set things in object buffer */
         }
 
-        Mesh _mesh;
-        Buffer _vertexBuffer, _indexBuffer;
-        SimpleShader& _shader;
-        SimpleMaterial _material;
+        std::vector<Examples::Object> _objects;
+        Buffer& _objectsBuffer;
 };
 
 RaytracingExample::RaytracingExample(const Arguments& arguments):
@@ -112,43 +140,128 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
         .setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(35.0_degf, 1.0f, 0.01f, 100.0f))
         .setViewport(defaultFramebuffer.viewport().size());
-    
+
     /* Default object, parent of all (for manipulation) */
     _o = new Object3D{&_scene};
 
-    Renderer::enable(Renderer::Feature::DepthTest);
-    Renderer::enable(Renderer::Feature::FaceCulling);
-
     /* create shader */
-    _shader = SimpleShader{};
+    _rayShader = RaytracingShader{};
 
-    RaytracingShader rayShader{};
+    /* initialize and bind output image */
+    refreshTexture(defaultFramebuffer.viewport().size());
 
-    Trade::MeshData3D cube = Primitives::Cube::solid();
-    // MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{0.1f}), cube.positions(0));
-    /* Create the mesh */
-    Mesh mesh{NoCreate};
-    std::unique_ptr<Buffer> vertexBuffer, indexBuffer;
-    std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(cube, BufferUsage::StaticDraw);
+    /* setup camera in shader */
+    Camera camera;
+    camera.pos = Vector3{0.f, 3.f, 6.f};//_cameraObject->transformationMatrix().translation();
+    camera.dir = -camera.pos.normalized();
+    camera.xAxis = cross(Vector3::yAxis(), camera.dir).normalized();
+    camera.yAxis = cross(-camera.dir, camera.xAxis);
+    camera.tanFovY = std::tan(35.f * float(M_PI) / 180.f / 2.f);
+    camera.tanFovX = (static_cast<float>(_width) * camera.tanFovY) / static_cast<float>(_height);
 
-    SimpleMaterial material;
-    material.ambientColor = Vector3{0.f, 0.f, 0.f};
-    material.diffuseColor = Vector3{0.3f, 0.3f, 0.f};
-    material.specularColor = Vector3{1.f};
+    _rayShader.setCamera(camera);
+
+    /* setup materials */
+    Material material;
+    material.diffuse = Color4(0.3f, 0.8f, 0.f, 1.f);
+    material.specular = Color4(1.f);
+    material.emission = Color4(0.f, 0.f, 0.f, 1.f);
     material.shininess = 80.f;
 
-    new ColoredObject(std::move(mesh), std::move(*vertexBuffer.release()), std::move(*indexBuffer.release()), _shader, material, _o, &_drawables);
+    std::vector<Material> mats;
+    mats.emplace_back(material);
+
+    material.diffuse = Color4(0.f, 0.3f, 0.8f, 1.f);
+    material.specular = Color4(1.f);
+    material.emission = Color4(0.f, 0.f, 0.f, 1.f);
+    material.shininess = 80.f;
+    mats.emplace_back(material);
+
+    /* bind materials buffer */
+    _materialsBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.materialBufferBindLocation());
+    _materialsBuffer.setData(mats, BufferUsage::DynamicCopy);
+
+    /* setup lights */
+    Light light;
+    light.position = Vector4(-5.f, 3.f, 3.f, 1.f); // w = 1.f means that it's not directional
+    light.ambient = Color4(0.f, 0.f, 0.f, 1.f);
+    light.diffuse = Color4(1.f);
+    light.specular = Color4(1.f);
+    light.spotDirection = Vector4(1.f, 0.f, 0.f, 1.f);
+    light.spotExponent = 1.f;
+    light.spotCutoff = Magnum::Math::Constants<Magnum::Float>::piHalf();
+    light.intensity = 30.f;
+    light.constantAttenuation = 0.f;
+    light.linearAttenuation = 0.f;
+    light.quadraticAttenuation = 1.f;
+
+    std::vector<Light> lights;
+    lights.emplace_back(light);
+
+    /* bind materials buffer */
+    _lightsBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.lightBufferBindLocation());
+    _lightsBuffer.setData(lights, BufferUsage::DynamicCopy);
+
+    /* create cube and set object buffer */
+    Trade::MeshData3D cube = Primitives::Cube::solid();
+
+    std::vector<Object> cube_objects;
+    for(UnsignedInt i = 0; i < cube.indices().size(); i += 3) {
+        Object obj;
+        obj.triangle.A.xyz() = cube.positions(0)[cube.indices()[i]];
+        obj.triangle.B.xyz() = cube.positions(0)[cube.indices()[i + 1]];
+        obj.triangle.C.xyz() = cube.positions(0)[cube.indices()[i + 2]];
+
+        obj.materialIndex = 0;
+
+        cube_objects.emplace_back(obj);
+    }
+
+    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{5.f, 0.1f, 5.f}), cube.positions(0));
+    MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{0.f, -1.1f, 0.f}), cube.positions(0));
+    /* add ground */
+    for(UnsignedInt i = 0; i < cube.indices().size(); i += 3) {
+        Object obj;
+        obj.triangle.A.xyz() = cube.positions(0)[cube.indices()[i]];
+        obj.triangle.B.xyz() = cube.positions(0)[cube.indices()[i + 1]];
+        obj.triangle.C.xyz() = cube.positions(0)[cube.indices()[i + 2]];
+
+        obj.materialIndex = 1;
+
+        cube_objects.emplace_back(obj);
+    }
+
+    /* bind objects buffer */
+    _objectsBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.objectBufferBindLocation());
+    _objectsBuffer.setData(cube_objects, BufferUsage::DynamicCopy);
+
+    /* set scene params */
+    UnsignedInt reflectionDepth = 2;
+    _rayShader.setSceneParams(cube_objects.size(), lights.size(), reflectionDepth);
 }
 
 void RaytracingExample::drawEvent() {
-    defaultFramebuffer.clear(FramebufferClear::Color | FramebufferClear::Depth);
-    _camera->draw(_drawables);
+    defaultFramebuffer.clear(FramebufferClear::Color);
+    // _camera->draw(_drawables);
+    Renderer::setMemoryBarrier(Renderer::MemoryBarrier::TextureUpdate | Renderer::MemoryBarrier::ShaderStorage | Renderer::MemoryBarrier::BufferUpdate);
+    /* zero image and re-bind */
+    refreshTexture(defaultFramebuffer.viewport().size());
+    /* perform raycasting */
+    _rayShader.dispatchCompute({_width / _workgroupSize, _height / _workgroupSize, 1});
+    Renderer::setMemoryBarrier(Renderer::MemoryBarrier::TextureUpdate | Renderer::MemoryBarrier::ShaderStorage | Renderer::MemoryBarrier::BufferUpdate);
+
+    _renderShader.setOutputTexture(_outputImage);
+    Mesh mesh;
+    mesh.setCount(3)
+        .draw(_renderShader);
     swapBuffers();
 }
 
 void RaytracingExample::viewportEvent(const Vector2i& size) {
     defaultFramebuffer.setViewport({{}, size});
     _camera->setViewport(size);
+    _rayShader.setViewport(size[0], size[1]);
+    refreshTexture(size);
 }
 
 void RaytracingExample::mousePressEvent(MouseEvent& event) {
@@ -197,6 +310,20 @@ void RaytracingExample::mouseMoveEvent(MouseMoveEvent& event) {
     _previousPosition = currentPosition;
 
     redraw();
+}
+
+void RaytracingExample::refreshTexture(const Vector2i& size) {
+    _width = size[0];
+    _height = size[1];
+
+    Image2D image{PixelFormat::RGBA, PixelType::Float, size, Containers::Array<char>(size[0]*size[1]*16)};
+    _outputImage.setWrapping(Sampler::Wrapping::ClampToEdge)
+                .setMinificationFilter(Sampler::Filter::Nearest)
+                .setMagnificationFilter(Sampler::Filter::Nearest)
+                .setImage(0, TextureFormat::RGBA, image);
+
+    _rayShader.setOutputTexture(_outputImage);
+    _rayShader.setViewport(_width, _height);
 }
 
 }}

@@ -46,28 +46,28 @@ class RaytracingShader: public AbstractShaderProgram {
             return *this;
         }
 
-        RaytracingShader& setViewport(Int width, Int height) {
+        RaytracingShader& setViewport(UnsignedInt width, UnsignedInt height) {
             setUniform(_widthUniform, width);
             setUniform(_heightUniform, height);
             return *this;
         }
 
-        RaytracingShader& setNumObjects(Int numObjects) {
+        RaytracingShader& setNumObjects(UnsignedInt numObjects) {
             setUniform(_numObjectsUniform, numObjects);
             return *this;
         }
 
-        RaytracingShader& setNumLights(Int numLights) {
+        RaytracingShader& setNumLights(UnsignedInt numLights) {
             setUniform(_numLightsUniform, numLights);
             return *this;
         }
 
-        RaytracingShader& setReflectionDepth(Int depth) {
+        RaytracingShader& setReflectionDepth(UnsignedInt depth) {
             setUniform(_reflectionDepthUniform, depth);
             return *this;
         }
 
-        RaytracingShader& setSceneParams(Int numObjects, Int numLights, Int depth) {
+        RaytracingShader& setSceneParams(UnsignedInt numObjects, UnsignedInt numLights, UnsignedInt depth) {
             this->setNumObjects(numObjects)
                 .setNumLights(numLights)
                 .setReflectionDepth(depth);

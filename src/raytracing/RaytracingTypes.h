@@ -43,6 +43,7 @@ struct Material {
 	Color4 specular;
 	Color4 emission;
 	Float shininess;
+    Vector3 dummy; /* for glsl alignment */
     /* todo: add refraction once first draft is working */
     /* todo: add textures once first draft is working */
 };
@@ -50,9 +51,9 @@ struct Material {
 /* assume counter-clockwise direction for normal */
 struct Triangle {
     /* vertices of triangle */
-	Vector3 A;
-    Vector3 B;
-    Vector3 C;
+	Vector4 A;
+    Vector4 B;
+    Vector4 C;
     /* todo: maybe include normal vectors as well */
     /* todo: maybe include texture coordinates */
 };
@@ -61,6 +62,7 @@ struct Triangle {
 struct Object {
 	Triangle triangle;
 	Int materialIndex;
+    Vector3 dummy; /* for glsl alignment */
 };
 
 /* Light model */
@@ -69,13 +71,14 @@ struct Light {
     Color4 ambient;
     Color4 diffuse;
     Color4 specular;
-    Vector3 spotDirection;
+    Vector4 spotDirection;
     Float spotExponent;
     Float spotCutoff;
     Float intensity;
     Float constantAttenuation;
     Float linearAttenuation;
     Float quadraticAttenuation;
+    Vector2 dummy;  /* for glsl alignment */
 };
 
 }}

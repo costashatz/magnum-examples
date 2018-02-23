@@ -25,6 +25,7 @@
 
 #include "Magnum/Context.h"
 #include "Magnum/Extensions.h"
+#include "Magnum/ImageFormat.h"
 #include "Magnum/Shader.h"
 #include "Magnum/Texture.h"
 
@@ -45,7 +46,8 @@ RaytracingShader::RaytracingShader() {
 }
 
 RaytracingShader& RaytracingShader::setOutputTexture(Texture2D& texture) {
-    texture.bind(_outputTextureBindLocation);
+    /* unit, level, access, format */
+    texture.bindImage(_outputTextureBindLocation, 0, ImageAccess::WriteOnly, ImageFormat::RGBA8);
     return *this;
 }
 

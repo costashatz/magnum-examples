@@ -84,7 +84,7 @@ layout(location = 9) uniform uint numOfLights = 0;
 layout(location = 10) uniform uint reflectionDepth = 2;
 
 /* output image */
-layout(binding = 6) writeonly uniform image2D outputImage;
+layout(binding = 6, RGBA8) writeonly uniform image2D outputImage;
 
 /* triangle ray-tracing */
 /* todo: check if this is correct */
@@ -92,25 +92,29 @@ float traceTriangle(Ray r, Triangle t) {
     vec3 AB = t.B.xyz - t.A.xyz;
     vec3 AC = t.C.xyz - t.A.xyz;
 
-    float det = determinant(mat3(AB, AC, -1. * r.dir));
+    vec3 p = cross(r.dir, AC);
+    float tmp = dot(p, AB);
 
-    if(det == 0.0){
+    if (tmp > -0.00001 && tmp < 0.00001)
         return FAR_CLIP;
-    }
+    tmp = 1. / tmp;
 
-    vec3 oA = r.origin - t.A.xyz;
+    vec3 s = r.origin - t.A.xyz;
+    float u = tmp * dot(s, p);
+    if(u < 0.0 || u > 1.0)
+        return FAR_CLIP;
 
-    mat3 Di = inverse(mat3(AB, AC, -1. * r.dir));
-    vec3 solution = Di*oA;
+    vec3 q = cross(s, AB);
+    float v = tmp * dot(r.dir, q);
+    if(v < 0.0 || (u+v) > 1.0)
+        return FAR_CLIP;
 
-    if(solution.x >= -0.0001 && solution.x <= 1.0001){
-        if(solution.y >= -0.0001 && solution.y <= 1.0001){
-            if(solution.x + solution.y <= 1.0001){
-                return solution.z;
-            }
-        }
-    }
-    return FAR_CLIP;
+    float tHit = tmp * dot(AC, q);
+
+    if (tHit < 0.)
+        return FAR_CLIP;
+
+    return tHit;
 }
 
 /* initial ray from camera and screen point */
@@ -139,7 +143,7 @@ Ray getReflectionRay(Ray r, int currentObject, float t) {
     vec3 N = normalize(cross((objects[currentObject].triangle.B - objects[currentObject].triangle.A).xyz,
                                 (objects[currentObject].triangle.C - objects[currentObject].triangle.A).xyz));
 
-    vec3 dir = normalize(r.dir - 2 * dot(r.dir, N) * N);
+    vec3 dir = reflect(r.dir, N);
     Ray ray;
     ray.origin = hitPoint + dir * 0.01;
     ray.dir = dir;
@@ -221,7 +225,7 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
     vec3 N = normalize(cross((objects[currentObject].triangle.B - objects[currentObject].triangle.A).xyz, 
                                     (objects[currentObject].triangle.C - objects[currentObject].triangle.A).xyz));
     
-    hitPoint += 0.01 * N;
+    hitPoint += 0.001 * N;
 
     /* iterate over lights */
     for(int i = 0; i < numOfLights; i++) {
@@ -235,7 +239,9 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
 
         /* check if in shadow */
         for(int j = 0; j < numOfObjects; j++) {
-            float tHit = traceTriangle(lightRay, objects[i].triangle);
+            if(j == currentObject)
+                continue;
+            float tHit = traceTriangle(lightRay, objects[j].triangle);
 
             if(intersected(lights[i], tHit, hitPoint)) {
                 inShadow = true;
@@ -252,9 +258,13 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
 
             vec4 diffuseReflection = attenuation * lights[i].diffuse * mat.diffuse * intensity;
 
-            vec3 reflection = reflect(-normalizedLightDirection, N);
-            float specularity = pow(max(0.0, dot(normalize(camera.pos - hitPoint), reflection)), mat.shininess);
-            vec4 specularReflection = attenuation * lights[i].specular * mat.specular * specularity;
+            // vec3 reflection = reflect(-normalizedLightDirection, N);
+            // float specularity = pow(max(0.0, dot(normalize(r.origin - hitPoint), reflection)), mat.shininess);
+            // vec4 specularReflection = attenuation * lights[i].specular * mat.specular * specularity;
+            vec3 toEye = normalize(r.origin - hitPoint);
+            vec3 halfV = normalize(toEye + normalizedLightDirection);
+            float t = dot(N, halfV);
+            vec4 specularReflection = attenuation * mat.specular * lights[i].specular * pow(max(t, 0.), mat.shininess);
 
             color += diffuseReflection + specularReflection;
         }
@@ -267,7 +277,7 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
 }
 
 /* do the actual work */
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout (local_size_x = 20, local_size_y = 20, local_size_z = 1) in;
 void main(){
     uint x = gl_GlobalInvocationID.x;
     uint y = gl_GlobalInvocationID.y;
@@ -289,7 +299,7 @@ void main(){
         int currentObject = -1;
 
         for(int j = 0; j < numOfObjects; j++) {
-            tHit = traceTriangle(ray, objects[i].triangle);
+            tHit = traceTriangle(ray, objects[j].triangle);
 
             if(tHit < t && tHit >= 0.) {
                 currentObject = j;
@@ -307,11 +317,11 @@ void main(){
         int matIndex = objects[currentObject].materialIndex;
         Material mat = materials[matIndex];
 
-        /* no specularity, get color and break */
-        if(mat.specular.rgb == vec3(0.)) {
-            color += tempColor;
+        /* get color */
+        color += tempColor;
+        /* no specularity; break */
+        if(mat.specular.rgb == vec3(0.))
             break;
-        }
 
         /* we have specular object; calculate shiny color
          * and reflection ray
