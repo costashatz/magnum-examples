@@ -43,6 +43,7 @@
 #include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Primitives/Cube.h>
+#include <Magnum/Primitives/Icosphere.h>
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/MatrixTransformation3D.h>
@@ -228,6 +229,21 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
 
         cube_objects.emplace_back(obj);
     }
+
+    // Trade::MeshData3D sphere = Primitives::Icosphere::solid(2);
+    // Debug{} << sphere.indices().size();
+    // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{4.f, 1.f, 1.f}), sphere.positions(0));
+    // /* add a sphere */
+    // for(UnsignedInt i = 0; i < sphere.indices().size(); i += 3) {
+    //     Object obj;
+    //     obj.triangle.A.xyz() = sphere.positions(0)[sphere.indices()[i]];
+    //     obj.triangle.B.xyz() = sphere.positions(0)[sphere.indices()[i + 1]];
+    //     obj.triangle.C.xyz() = sphere.positions(0)[sphere.indices()[i + 2]];
+
+    //     obj.materialIndex = 0;
+
+    //     cube_objects.emplace_back(obj);
+    // }
 
     /* bind objects buffer */
     _objectsBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.objectBufferBindLocation());
