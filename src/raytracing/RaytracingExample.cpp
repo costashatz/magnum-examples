@@ -152,7 +152,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
 
     /* setup camera in shader */
     Camera camera;
-    camera.pos = Vector3{0.f, 3.f, 6.f};//_cameraObject->transformationMatrix().translation();
+    camera.pos = Vector3{-4.f, 3.f, 6.f};//_cameraObject->transformationMatrix().translation();
     camera.dir = -camera.pos.normalized();
     camera.xAxis = cross(Vector3::yAxis(), camera.dir).normalized();
     camera.yAxis = cross(-camera.dir, camera.xAxis);
@@ -217,8 +217,8 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
         cube_objects.emplace_back(obj);
     }
 
-    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{5.f, 0.1f, 5.f}), cube.positions(0));
-    MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{0.f, -1.1f, 0.f}), cube.positions(0));
+    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{20.f, 0.1f, 20.f}), cube.positions(0));
+    MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{0.f, -1.05f, 0.f}), cube.positions(0));
     /* add ground */
     for(UnsignedInt i = 0; i < cube.indices().size(); i += 3) {
         Object obj;

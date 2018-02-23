@@ -1,5 +1,6 @@
 #define M_PI 3.1415926535897932384626433832795
 #define FAR_CLIP  1000.0f
+#define MAX_REFLECTION_DEPTH 5
 
 /* Camera model */
 struct Camera {
@@ -145,7 +146,7 @@ Ray getReflectionRay(Ray r, int currentObject, float t) {
 
     vec3 dir = reflect(r.dir, N);
     Ray ray;
-    ray.origin = hitPoint + dir * 0.01;
+    ray.origin = hitPoint + dir * 0.001;
     ray.dir = dir;
 
     return ray;
@@ -256,17 +257,13 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
             /* calculate direct light components */
             float attenuation = getLightAttenuation(lights[i], lightDirection, normalizedLightDirection);
 
-            vec4 diffuseReflection = attenuation * lights[i].diffuse * mat.diffuse * intensity;
+            vec4 diffuseReflection = lights[i].diffuse * mat.diffuse * intensity;
 
-            // vec3 reflection = reflect(-normalizedLightDirection, N);
-            // float specularity = pow(max(0.0, dot(normalize(r.origin - hitPoint), reflection)), mat.shininess);
-            // vec4 specularReflection = attenuation * lights[i].specular * mat.specular * specularity;
-            vec3 toEye = normalize(r.origin - hitPoint);
-            vec3 halfV = normalize(toEye + normalizedLightDirection);
-            float t = dot(N, halfV);
-            vec4 specularReflection = attenuation * mat.specular * lights[i].specular * pow(max(t, 0.), mat.shininess);
+            vec3 reflection = reflect(-normalizedLightDirection, N);
+            float specularity = pow(max(0.0, dot(normalize(r.origin - hitPoint), reflection)), mat.shininess);
+            vec4 specularReflection = lights[i].specular * mat.specular * specularity;
 
-            color += diffuseReflection + specularReflection;
+            color += attenuation * (diffuseReflection + specularReflection);
         }
 
         /* add ambient component of light, no matter what */
@@ -294,7 +291,15 @@ void main(){
     /* initial ray from pixel and camera position */
     Ray ray = initRay(x, y, camera);
 
-    for(int i = 0; i < reflectionDepth; i++) {
+    /* store reflection depth results to combine correctly */
+    vec4 reflectedColors[MAX_REFLECTION_DEPTH];
+    uint mats[MAX_REFLECTION_DEPTH];
+    int valid[MAX_REFLECTION_DEPTH];
+    uint reflectionDepthReached = 0;
+
+    for(uint i = 0; i < reflectionDepth; i++) {
+        reflectionDepthReached = i;
+
         float t = FAR_CLIP, tHit = FAR_CLIP;
         int currentObject = -1;
 
@@ -307,32 +312,50 @@ void main(){
             }
         }
 
+        /* save if there was a hit or not */
+        valid[i] = currentObject;
+
         /* no hit */
         if(currentObject == -1)
             break;
         /* we have a hit; get lights color */
         vec4 tempColor = calculateColor(ray, t, currentObject);
+        int matIndex = objects[currentObject].materialIndex;
+
+        /* store information for color computation */
+        reflectedColors[i] = tempColor;
+        mats[i] = matIndex;
+
         if(tempColor.rgb == vec3(0.))
             break;
-        int matIndex = objects[currentObject].materialIndex;
         Material mat = materials[matIndex];
 
-        /* get color */
-        color += tempColor;
         /* no specularity; break */
         if(mat.specular.rgb == vec3(0.))
             break;
 
-        /* we have specular object; calculate shiny color
-         * and reflection ray
-         */
-        color += mat.specular * tempColor;
-
-        /* reflection ray */
-        ray = getReflectionRay(ray, currentObject, t);
-
         /* todo: calculate refraction ray here */
+
+        /* we have specular object; calculate reflection ray */
+        ray = getReflectionRay(ray, currentObject, t);
     }
 
+    /* decay for reflected rays */
+    float decay = 0.9;
+    /* compute actual colors */
+    for(uint i = 0; i <= reflectionDepthReached; i++) {
+        if(valid[i] < 0)
+            break;
+        vec4 spec = vec4(1.f);
+        float d = 1.;
+        if(i > 0) {
+            spec = materials[mats[i-1]].specular;
+            d = decay;
+            decay = decay * decay;
+        }
+        color += d * spec * reflectedColors[i];
+    }
+
+    /* store pixel into output image */
     imageStore(outputImage, ivec2(x, y), vec4(color.rgb, 1.));
 }
