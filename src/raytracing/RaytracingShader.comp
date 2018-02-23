@@ -156,7 +156,7 @@ Ray getReflectionRay(Ray r, int currentObject, float t) {
 float getLightAttenuation(Light light, vec3 lightDirection, vec3 normalizedLightDirection) {
     /* Directional light */
     if(light.position.w == 0.0)
-        return 1.;
+        return light.intensity;
     /* Pointlight or Spotlight */
     float dist = length(lightDirection);
     float attenuation = light.intensity / (light.constantAttenuation + 

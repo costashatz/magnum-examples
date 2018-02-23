@@ -100,6 +100,7 @@ class RaytracingExample: public Platform::Application {
 
         Vector3 positionOnSphere(const Vector2i& _position) const;
         void refreshTexture(const Vector2i& size);
+        void refreshCamera();
 
         Scene3D _scene;
         Object3D *_o, *_cameraObject;
@@ -134,8 +135,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     Platform::Application{arguments, Configuration{}.setTitle("Magnum Raycasting Example")}
 {
     /* Every scene needs a camera */
-    (*(_cameraObject = new Object3D{&_scene}))
-        .translate(Vector3::zAxis(10.0f));
+    (*(_cameraObject = new Object3D{&_scene}));
     (*(_camera = new SceneGraph::Camera3D{*_cameraObject}))
         .setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(35.0_degf, 1.0f, 0.01f, 100.0f))
@@ -150,16 +150,10 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     /* initialize and bind output image */
     refreshTexture(defaultFramebuffer.viewport().size());
 
-    /* setup camera in shader */
-    Camera camera;
-    camera.pos = Vector3{-4.f, 3.f, 6.f};//_cameraObject->transformationMatrix().translation();
-    camera.dir = -camera.pos.normalized();
-    camera.xAxis = cross(Vector3::yAxis(), camera.dir).normalized();
-    camera.yAxis = cross(-camera.dir, camera.xAxis);
-    camera.tanFovY = std::tan(35.f * float(M_PI) / 180.f / 2.f);
-    camera.tanFovX = (static_cast<float>(_width) * camera.tanFovY) / static_cast<float>(_height);
-
-    _rayShader.setCamera(camera);
+    /* initialize and setup camera in shader */
+    /* camera located at (2,3,10) looking in the center */
+    _cameraObject->setTransformation(Matrix4::lookAt({2.f, 3.f, 10.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
+    refreshCamera();
 
     /* setup materials */
     Material material;
@@ -198,7 +192,11 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     std::vector<Light> lights;
     lights.emplace_back(light);
 
-    /* bind materials buffer */
+    light.position = Vector4(0.6f, 0.5f, 0.6f, 0.f).normalized(); // w = 0.f means directional
+    light.intensity = 0.5f;
+    lights.emplace_back(light);
+
+    /* bind lights buffer */
     _lightsBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.lightBufferBindLocation());
     _lightsBuffer.setData(lights, BufferUsage::DynamicCopy);
 
@@ -242,6 +240,8 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
 
 void RaytracingExample::drawEvent() {
     defaultFramebuffer.clear(FramebufferClear::Color);
+    /* refresh camera */
+    refreshCamera();
     // _camera->draw(_drawables);
     Renderer::setMemoryBarrier(Renderer::MemoryBarrier::TextureUpdate | Renderer::MemoryBarrier::ShaderStorage | Renderer::MemoryBarrier::BufferUpdate);
     /* zero image and re-bind */
@@ -324,6 +324,19 @@ void RaytracingExample::refreshTexture(const Vector2i& size) {
 
     _rayShader.setOutputTexture(_outputImage);
     _rayShader.setViewport(_width, _height);
+}
+
+void RaytracingExample::refreshCamera() {
+    Matrix4 cameraTransformation = _cameraObject->transformationMatrix();
+    Camera camera;
+    camera.pos = cameraTransformation.translation();
+    camera.xAxis = -cameraTransformation.right().normalized();
+    camera.yAxis = -cameraTransformation.up().normalized();
+    camera.dir = -cameraTransformation.backward().normalized();
+    camera.tanFovY = std::tan(35.f * float(M_PI) / 180.f / 2.f);
+    camera.tanFovX = (static_cast<float>(_width) * camera.tanFovY) / static_cast<float>(_height);
+
+    _rayShader.setCamera(camera);
 }
 
 }}
