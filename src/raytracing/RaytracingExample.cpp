@@ -190,7 +190,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     light.ambient = Color4(0.f, 0.f, 0.f, 1.f);
     light.diffuse = Color4(1.f);
     light.specular = Color4(1.f);
-    light.spotDirection = Vector4(1.f, 0.f, 0.f, 1.f);
+    light.spotDirection.xyz() = Vector3(1.f, -0.5f, -0.2f).normalized();
     light.spotExponent = 1.f;
     light.spotCutoff = Magnum::Math::Constants<Magnum::Float>::piHalf();
     light.intensity = 30.f;
