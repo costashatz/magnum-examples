@@ -116,6 +116,7 @@ class RaytracingExample: public Platform::Application {
         Buffer _objectsBuffer;
         Buffer _materialsBuffer;
         Buffer _lightsBuffer;
+        Buffer _meshesBuffer;
         Texture2D _outputImage;
 };
 
@@ -155,6 +156,11 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     /* camera located at (2,3,10) looking in the center */
     _cameraObject->setTransformation(Matrix4::lookAt({2.f, 3.f, 10.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
     refreshCamera();
+
+    /* bind meshes buffer */
+    _meshesBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.meshBufferBindLocation());
+
+    std::vector<RayMesh> meshes;
 
     /* setup materials */
     Material material;
@@ -204,18 +210,56 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     /* create cube and set object buffer */
     Trade::MeshData3D cube = Primitives::Cube::solid();
 
-    std::vector<Object> cube_objects;
+    std::vector<Object> triangle_objects;
+
+    Float minX = Constants::inf();
+    Float minY = Constants::inf();
+    Float minZ = Constants::inf();
+    Float maxX = -Constants::inf();
+    Float maxY = -Constants::inf();
+    Float maxZ = -Constants::inf();
+
     for(UnsignedInt i = 0; i < cube.indices().size(); i += 3) {
         Object obj;
         obj.triangle.A.xyz() = cube.positions(0)[cube.indices()[i]];
         obj.triangle.B.xyz() = cube.positions(0)[cube.indices()[i + 1]];
         obj.triangle.C.xyz() = cube.positions(0)[cube.indices()[i + 2]];
 
+        obj.triangle.normal.xyz() = (cross((obj.triangle.B - obj.triangle.A).xyz(), (obj.triangle.C - obj.triangle.A).xyz())).normalized();
+
+        obj.meshId = 0;
         obj.materialIndex = 0;
 
-        cube_objects.emplace_back(obj);
-    }
+        triangle_objects.emplace_back(obj);
 
+        /* bounding box computation */
+        for(UnsignedInt j = 0; j < 3; j++) {
+            Vector3 vec =  cube.positions(0)[cube.indices()[i + j]];
+            if(vec.x() < minX)
+                minX = vec.x();
+            if(vec.x() > maxX)
+                maxX = vec.x();
+            if(vec.y() < minY)
+                minY = vec.y();
+            if(vec.y() > maxY)
+                maxY = vec.y();
+            if(vec.z() < minZ)
+                minZ = vec.z();
+            if(vec.z() > maxZ)
+                maxZ = vec.z();
+        }
+    }
+    RayMesh mBox;
+    mBox.minPoint = Vector4(minX, minY, minZ, 1.f);
+    mBox.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    meshes.push_back(mBox);
+
+    minX = Constants::inf();
+    minY = Constants::inf();
+    minZ = Constants::inf();
+    maxX = -Constants::inf();
+    maxY = -Constants::inf();
+    maxZ = -Constants::inf();
     MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{20.f, 0.1f, 20.f}), cube.positions(0));
     MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{0.f, -1.05f, 0.f}), cube.positions(0));
     /* add ground */
@@ -225,33 +269,137 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
         obj.triangle.B.xyz() = cube.positions(0)[cube.indices()[i + 1]];
         obj.triangle.C.xyz() = cube.positions(0)[cube.indices()[i + 2]];
 
+        obj.triangle.normal.xyz() = (cross((obj.triangle.B - obj.triangle.A).xyz(), (obj.triangle.C - obj.triangle.A).xyz())).normalized();
+
+        obj.meshId = 1;
         obj.materialIndex = 1;
 
-        cube_objects.emplace_back(obj);
+        triangle_objects.emplace_back(obj);
+
+        /* bounding box computation */
+        for(UnsignedInt j = 0; j < 3; j++) {
+            Vector3 vec =  cube.positions(0)[cube.indices()[i + j]];
+            if(vec.x() < minX)
+                minX = vec.x();
+            if(vec.x() > maxX)
+                maxX = vec.x();
+            if(vec.y() < minY)
+                minY = vec.y();
+            if(vec.y() > maxY)
+                maxY = vec.y();
+            if(vec.z() < minZ)
+                minZ = vec.z();
+            if(vec.z() > maxZ)
+                maxZ = vec.z();
+        }
     }
+    RayMesh mGround;
+    mGround.minPoint = Vector4(minX, minY, minZ, 1.f);
+    mGround.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    meshes.push_back(mGround);
 
-    // Trade::MeshData3D sphere = Primitives::Icosphere::solid(2);
+    Trade::MeshData3D sphere = Primitives::Icosphere::solid(2);
     // Debug{} << sphere.indices().size();
-    // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{4.f, 1.f, 1.f}), sphere.positions(0));
-    // /* add a sphere */
-    // for(UnsignedInt i = 0; i < sphere.indices().size(); i += 3) {
-    //     Object obj;
-    //     obj.triangle.A.xyz() = sphere.positions(0)[sphere.indices()[i]];
-    //     obj.triangle.B.xyz() = sphere.positions(0)[sphere.indices()[i + 1]];
-    //     obj.triangle.C.xyz() = sphere.positions(0)[sphere.indices()[i + 2]];
+    MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{4.f, 1.f, 1.f}), sphere.positions(0));
+    /* add a sphere */
+    minX = Constants::inf();
+    minY = Constants::inf();
+    minZ = Constants::inf();
+    maxX = -Constants::inf();
+    maxY = -Constants::inf();
+    maxZ = -Constants::inf();
+    for(UnsignedInt i = 0; i < sphere.indices().size(); i += 3) {
+        Object obj;
+        obj.triangle.A.xyz() = sphere.positions(0)[sphere.indices()[i]];
+        obj.triangle.B.xyz() = sphere.positions(0)[sphere.indices()[i + 1]];
+        obj.triangle.C.xyz() = sphere.positions(0)[sphere.indices()[i + 2]];
 
+        obj.triangle.normal.xyz() = (cross((obj.triangle.B - obj.triangle.A).xyz(), (obj.triangle.C - obj.triangle.A).xyz())).normalized();
+
+        obj.meshId = 2;
+        obj.materialIndex = 0;
+
+        triangle_objects.emplace_back(obj);
+
+        /* bounding box computation */
+        for(UnsignedInt j = 0; j < 3; j++) {
+            Vector3 vec =  sphere.positions(0)[sphere.indices()[i + j]];
+            if(vec.x() < minX)
+                minX = vec.x();
+            if(vec.x() > maxX)
+                maxX = vec.x();
+            if(vec.y() < minY)
+                minY = vec.y();
+            if(vec.y() > maxY)
+                maxY = vec.y();
+            if(vec.z() < minZ)
+                minZ = vec.z();
+            if(vec.z() > maxZ)
+                maxZ = vec.z();
+        }
+    }
+    RayMesh mSphere;
+    mSphere.minPoint = Vector4(minX, minY, minZ, 1.f);
+    mSphere.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    meshes.push_back(mSphere);
+
+    // Trade::MeshData3D sphere2 = Primitives::Icosphere::solid(2);
+    // // Debug{} << sphere.indices().size();
+    // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{-4.f, 1.f, 1.f}), sphere2.positions(0));
+    // /* add a sphere */
+    // minX = Constants::inf();
+    // minY = Constants::inf();
+    // minZ = Constants::inf();
+    // maxX = -Constants::inf();
+    // maxY = -Constants::inf();
+    // maxZ = -Constants::inf();
+    // for(UnsignedInt i = 0; i < sphere2.indices().size(); i += 3) {
+    //     Object obj;
+    //     obj.triangle.A.xyz() = sphere2.positions(0)[sphere2.indices()[i]];
+    //     obj.triangle.B.xyz() = sphere2.positions(0)[sphere2.indices()[i + 1]];
+    //     obj.triangle.C.xyz() = sphere2.positions(0)[sphere2.indices()[i + 2]];
+
+    //     obj.triangle.normal.xyz() = (cross((obj.triangle.B - obj.triangle.A).xyz(), (obj.triangle.C - obj.triangle.A).xyz())).normalized();
+
+    //     obj.meshId = 3;
     //     obj.materialIndex = 0;
 
-    //     cube_objects.emplace_back(obj);
+    //     triangle_objects.emplace_back(obj);
+
+    //     /* bounding box computation */
+    //     for(UnsignedInt j = 0; j < 3; j++) {
+    //         Vector3 vec =  sphere2.positions(0)[sphere2.indices()[i + j]];
+    //         if(vec.x() < minX)
+    //             minX = vec.x();
+    //         if(vec.x() > maxX)
+    //             maxX = vec.x();
+    //         if(vec.y() < minY)
+    //             minY = vec.y();
+    //         if(vec.y() > maxY)
+    //             maxY = vec.y();
+    //         if(vec.z() < minZ)
+    //             minZ = vec.z();
+    //         if(vec.z() > maxZ)
+    //             maxZ = vec.z();
+    //     }
     // }
+    // RayMesh mSphere2;
+    // mSphere2.minPoint = Vector4(minX, minY, minZ, 1.f);
+    // mSphere2.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    // meshes.push_back(mSphere2);
+
+    Debug{} << "Number of triangles:" << triangle_objects.size();
 
     /* bind objects buffer */
     _objectsBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.objectBufferBindLocation());
-    _objectsBuffer.setData(cube_objects, BufferUsage::DynamicCopy);
+    _objectsBuffer.setData(triangle_objects, BufferUsage::DynamicCopy);
+
+    /* set meshes buffer */
+    _meshesBuffer.setData(meshes, BufferUsage::DynamicCopy);
 
     /* set scene params */
     UnsignedInt reflectionDepth = 2;
-    _rayShader.setSceneParams(cube_objects.size(), lights.size(), reflectionDepth);
+    _rayShader.setSceneParams(triangle_objects.size(), lights.size(), meshes.size(), reflectionDepth);
 }
 
 void RaytracingExample::drawEvent() {

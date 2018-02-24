@@ -54,15 +54,23 @@ struct Triangle {
 	Vector4 A;
     Vector4 B;
     Vector4 C;
-    /* todo: maybe include normal vectors as well */
+    Vector4 normal;
     /* todo: maybe include texture coordinates */
 };
 
 /* Triangle object */
 struct Object {
 	Triangle triangle;
+    Int meshId;
 	Int materialIndex;
-    Vector3 dummy; /* for glsl alignment */
+    Vector2 dummy; /* for glsl alignment */
+};
+
+/* Mesh info */
+struct RayMesh {
+    /* bounding box min, max points */
+    Vector4 minPoint;
+    Vector4 maxPoint;
 };
 
 /* Light model */

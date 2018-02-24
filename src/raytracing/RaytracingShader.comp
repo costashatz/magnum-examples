@@ -29,6 +29,7 @@ struct Triangle {
     vec4 A;
     vec4 B;
     vec4 C;
+    vec4 normal;
     /* todo: maybe include normal vectors as well */
     /* todo: maybe include texture coordinates */
 };
@@ -36,13 +37,23 @@ struct Triangle {
 /* Triangle object */
 struct Object {
     Triangle triangle;
+    int meshId; /* mesh that triangle belongs to */
     int materialIndex;
+};
+
+/* Mesh info */
+/* vec4 for layout thing */
+struct Mesh {
+    /* bounding box min, max points */
+    vec4 bounds[2];
 };
 
 /* Ray model */
 struct Ray {
     vec3 origin;
     vec3 dir;
+    vec3 invDir;
+    int signs[3];
 };
 
 /* Light model */
@@ -74,6 +85,10 @@ layout(std430, binding = 5) buffer LightBuffer {
     Light lights[];
 };
 
+layout(std430, binding = 11) buffer MeshBuffer {
+    Mesh meshes[];
+};
+
 /* camera */
 layout(location = 0) uniform Camera camera;
 /* viewport */
@@ -83,9 +98,54 @@ layout(location = 7) uniform uint height = 480;
 layout(location = 8) uniform uint numOfObjects = 0;
 layout(location = 9) uniform uint numOfLights = 0;
 layout(location = 10) uniform uint reflectionDepth = 2;
+layout(location = 12) uniform uint numOfMeshes = 0;
 
 /* output image */
 layout(binding = 6, RGBA8) writeonly uniform image2D outputImage;
+
+/* helper function */
+Ray createRay(vec3 origin, vec3 dir) {
+    Ray r;
+    r.origin = origin;
+    r.dir = dir;
+    r.invDir = vec3(1./dir.x, 1./dir.y, 1./dir.z);
+    r.signs[0] = int(r.invDir.x < 0);
+    r.signs[1] = int(r.invDir.y < 0);
+    r.signs[2] = int(r.invDir.z < 0);
+
+    return r;
+}
+
+bool intersectBoundingBox(Ray r, int meshId) {
+    /* sanity check */
+    if(meshId < 0)
+        return false;
+
+    Mesh m = meshes[meshId];
+    float tmin, tmax, tymin, tymax, tzmin, tzmax;
+
+    tmin = (m.bounds[r.signs[0]].x - r.origin.x) * r.invDir.x;
+    tmax = (m.bounds[1 - r.signs[0]].x - r.origin.x) * r.invDir.x;
+    tymin = (m.bounds[r.signs[1]].y - r.origin.y) * r.invDir.y;
+    tymax = (m.bounds[1 - r.signs[1]].y - r.origin.y) * r.invDir.y;
+    if((tmin > tymax) || (tymin > tmax))
+        return false;
+    if(tymin > tmin)
+        tmin = tymin;
+    if(tymax < tmax)
+        tmax = tymax;
+    tzmin = (m.bounds[r.signs[2]].z - r.origin.z) * r.invDir.z;
+    tzmax = (m.bounds[1 - r.signs[2]].z - r.origin.z) * r.invDir.z;
+
+    if((tmin > tzmax) || (tzmin > tmax))
+        return false;
+    if(tzmin > tmin)
+        tmin = tzmin;
+    if(tzmax < tmax)
+        tmax = tzmax;
+
+    return tmax > 0. && tmin > 0.;
+}
 
 /* triangle ray-tracing */
 /* todo: check if this is correct */
@@ -118,9 +178,27 @@ float traceTriangle(Ray r, Triangle t) {
     return tHit;
 }
 
+void traceMesh(in Ray r, in int meshId, out float tOut, out int obj) {
+    tOut = FAR_CLIP;
+    obj = -1;
+    if(!intersectBoundingBox(r, meshId))
+        return;
+    float t = FAR_CLIP;
+    for(int i = 0; i < numOfObjects; i++) {
+        if(objects[i].meshId == meshId) {
+            float tHit = traceTriangle(r, objects[i].triangle);
+            if(tHit < t && tHit >= 0.) {
+                t = tHit;
+                obj = i;
+            }
+        }
+    }
+
+    tOut = t;
+}
+
 /* initial ray from camera and screen point */
 Ray initRay(uint x, uint y, Camera cam) {
-    Ray r;
     vec3 dir;
     float a, b, halfWidth, halfHeight;
 
@@ -132,24 +210,16 @@ Ray initRay(uint x, uint y, Camera cam) {
 
     dir = normalize(a * cam.xAxis + b * cam.yAxis + cam.dir);
 
-    r.dir = dir;
-    r.origin = cam.pos;
-
-    return r;
+    return createRay(cam.pos, dir);
 }
 
 /* reflection ray */
 Ray getReflectionRay(Ray r, int currentObject, float t) {
     vec3 hitPoint = r.origin + r.dir * t;
-    vec3 N = normalize(cross((objects[currentObject].triangle.B - objects[currentObject].triangle.A).xyz,
-                                (objects[currentObject].triangle.C - objects[currentObject].triangle.A).xyz));
-
+    vec3 N = objects[currentObject].triangle.normal.xyz;
     vec3 dir = reflect(r.dir, N);
-    Ray ray;
-    ray.origin = hitPoint + dir * 0.001;
-    ray.dir = dir;
 
-    return ray;
+    return createRay(hitPoint + dir * 0.001, dir);
 }
 
 /* get light brightness/attenuation */
@@ -159,7 +229,7 @@ float getLightAttenuation(Light light, vec3 lightDirection, vec3 normalizedLight
         return light.intensity;
     /* Pointlight or Spotlight */
     float dist = length(lightDirection);
-    float attenuation = light.intensity / (light.constantAttenuation + 
+    float attenuation = light.intensity / (light.constantAttenuation +
                                                     dist * (light.linearAttenuation + dist * light.quadraticAttenuation));
     /* Spotlight */
     if(light.spotCutoff < M_PI / 2.) {
@@ -178,18 +248,17 @@ float getLightAttenuation(Light light, vec3 lightDirection, vec3 normalizedLight
 
 /* get light ray with unormalized direction */
 Ray getLightRay(Light light, vec3 hitPoint) {
-    Ray lightRay;
-    lightRay.origin = hitPoint;
+    vec3 dir;
     /* Directional light */
     if(light.position.w == 0.0) {
-        lightRay.dir = normalize(light.position.xyz);
+        dir = normalize(light.position.xyz);
     }
     /* Pointlight or Spotlight */
     else {
-        lightRay.dir = light.position.xyz - hitPoint; //normalize(light.position.xyz - hitPoint);
+        dir = light.position.xyz - hitPoint; //normalize(light.position.xyz - hitPoint);
     }
 
-    return lightRay;
+    return createRay(hitPoint, dir);
 }
 
 bool intersected(Light light, float tHit, vec3 previousHitPoint) {
@@ -223,9 +292,8 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
 
     /* hitPoint and normal (N) */
     vec3 hitPoint = r.origin + t * r.dir;
-    vec3 N = normalize(cross((objects[currentObject].triangle.B - objects[currentObject].triangle.A).xyz, 
-                                    (objects[currentObject].triangle.C - objects[currentObject].triangle.A).xyz));
-    
+    vec3 N = objects[currentObject].triangle.normal.xyz;
+
     hitPoint += 0.001 * N;
 
     /* iterate over lights */
@@ -239,11 +307,12 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
         bool inShadow = false;
 
         /* check if in shadow */
-        for(int j = 0; j < numOfObjects; j++) {
-            if(j == currentObject)
+        for(int j = 0; j < numOfMeshes; j++) {
+            if(j == objects[currentObject].meshId)
                 continue;
-            float tHit = traceTriangle(lightRay, objects[j].triangle);
-
+            int k = -1;
+            float tHit = FAR_CLIP;
+            traceMesh(lightRay, j, tHit, k);
             if(intersected(lights[i], tHit, hitPoint)) {
                 inShadow = true;
                 break;
@@ -303,11 +372,12 @@ void main(){
         float t = FAR_CLIP, tHit = FAR_CLIP;
         int currentObject = -1;
 
-        for(int j = 0; j < numOfObjects; j++) {
-            tHit = traceTriangle(ray, objects[j].triangle);
+        for(int j = 0; j < numOfMeshes; j++) {
+            int k = -1;
+            traceMesh(ray, j, tHit, k);
 
             if(tHit < t && tHit >= 0.) {
-                currentObject = j;
+                currentObject = k;
                 t = tHit;
             }
         }

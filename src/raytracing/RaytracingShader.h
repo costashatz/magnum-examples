@@ -67,8 +67,14 @@ class RaytracingShader: public AbstractShaderProgram {
             return *this;
         }
 
-        RaytracingShader& setSceneParams(UnsignedInt numObjects, UnsignedInt numLights, UnsignedInt depth) {
+        RaytracingShader& setNumMeshes(UnsignedInt numMeshes) {
+            setUniform(_numMeshesUniform, numMeshes);
+            return *this;
+        }
+
+        RaytracingShader& setSceneParams(UnsignedInt numObjects, UnsignedInt numLights, UnsignedInt numMeshes, UnsignedInt depth) {
             this->setNumObjects(numObjects)
+                .setNumMeshes(numMeshes)
                 .setNumLights(numLights)
                 .setReflectionDepth(depth);
             return *this;
@@ -77,6 +83,7 @@ class RaytracingShader: public AbstractShaderProgram {
         Int objectBufferBindLocation() { return _objectBufferBindLocation; }
         Int materialBufferBindLocation() { return _materialBufferBindLocation; }
         Int lightBufferBindLocation() { return _lightBufferBindLocation; }
+        Int meshBufferBindLocation() { return _meshBufferBindLocation; }
 
         RaytracingShader& setOutputTexture(Texture2D& texture);
 
@@ -86,11 +93,13 @@ class RaytracingShader: public AbstractShaderProgram {
             _heightUniform{7},
             _numObjectsUniform{8},
             _numLightsUniform{9},
-            _reflectionDepthUniform{10};
+            _reflectionDepthUniform{10},
+            _numMeshesUniform{12};
         Int _objectBufferBindLocation{3},
             _materialBufferBindLocation{4},
             _lightBufferBindLocation{5},
-            _outputTextureBindLocation{6};
+            _outputTextureBindLocation{6},
+            _meshBufferBindLocation{11};
 };
 
 }}
