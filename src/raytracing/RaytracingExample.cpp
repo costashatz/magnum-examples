@@ -40,6 +40,7 @@
 #include <Magnum/Shader.h>
 #include <Magnum/Texture.h>
 #include <Magnum/TextureFormat.h>
+#include <Magnum/Timeline.h>
 #include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Primitives/Cube.h>
@@ -108,6 +109,7 @@ class RaytracingExample: public Platform::Application {
         SceneGraph::Camera3D* _camera;
         SceneGraph::DrawableGroup3D _drawables;
         Vector3 _previousPosition;
+        Timeline _timeline;
 
         RenderTextureShader _renderShader;
         RaytracingShader _rayShader;
@@ -400,10 +402,19 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     /* set scene params */
     UnsignedInt reflectionDepth = 2;
     _rayShader.setSceneParams(triangle_objects.size(), lights.size(), meshes.size(), reflectionDepth);
+    _rayShader.setReflectionDecay(0.8f);
+
+    /* Loop at 60 Hz max */
+    setSwapInterval(1);
+    setMinimalLoopPeriod(16);
+    _timeline.start();
+
+    redraw();
 }
 
 void RaytracingExample::drawEvent() {
     defaultFramebuffer.clear(FramebufferClear::Color);
+    Debug{} << _timeline.previousFrameDuration() * 1e3f;
     /* refresh camera */
     refreshCamera();
     // _camera->draw(_drawables);
@@ -419,6 +430,8 @@ void RaytracingExample::drawEvent() {
     mesh.setCount(3)
         .draw(_renderShader);
     swapBuffers();
+    redraw();
+    _timeline.nextFrame();
 }
 
 void RaytracingExample::viewportEvent(const Vector2i& size) {

@@ -99,6 +99,7 @@ layout(location = 8) uniform uint numOfObjects = 0;
 layout(location = 9) uniform uint numOfLights = 0;
 layout(location = 10) uniform uint reflectionDepth = 2;
 layout(location = 12) uniform uint numOfMeshes = 0;
+layout(location = 13) uniform float reflectionDecay = 0.8;
 
 /* output image */
 layout(binding = 6, RGBA8) writeonly uniform image2D outputImage;
@@ -156,7 +157,8 @@ float traceTriangle(Ray r, Triangle t) {
     vec3 p = cross(r.dir, AC);
     float tmp = dot(p, AB);
 
-    if (tmp > -0.00001 && tmp < 0.00001)
+    // if (tmp > -0.00001 && tmp < 0.00001)
+    if(tmp < 0.00001) /* back-face culling */
         return FAR_CLIP;
     tmp = 1. / tmp;
 
@@ -169,6 +171,12 @@ float traceTriangle(Ray r, Triangle t) {
     float v = tmp * dot(r.dir, q);
     if(v < 0.0 || (u+v) > 1.0)
         return FAR_CLIP;
+
+    /* texture coordinates for reference */
+    // const Vec2f &st0 = texCoordinates[triIndex * 3]; 
+    // const Vec2f &st1 = texCoordinates[triIndex * 3 + 1]; 
+    // const Vec2f &st2 = texCoordinates[triIndex * 3 + 2]; 
+    // hitTextureCoordinates = (1 - uv.x - uv.y) * st0 + uv.x * st1 + uv.y * st2;
 
     float tHit = tmp * dot(AC, q);
 
@@ -401,7 +409,7 @@ void main(){
         Material mat = materials[matIndex];
 
         /* no specularity; break */
-        if(mat.specular.rgb == vec3(0.))
+        if(mat.specular.rgb == vec3(0.) || reflectionDecay == 0.)
             break;
 
         /* todo: calculate refraction ray here */
@@ -411,7 +419,7 @@ void main(){
     }
 
     /* decay for reflected rays */
-    float decay = 0.9;
+    float decay = reflectionDecay;
     /* compute actual colors */
     for(uint i = 0; i <= reflectionDepthReached; i++) {
         if(valid[i] < 0)
@@ -423,6 +431,8 @@ void main(){
             d = decay;
             decay = decay * decay;
         }
+        if(d < 0.05)
+            break;
         color += d * spec * reflectedColors[i];
     }
 

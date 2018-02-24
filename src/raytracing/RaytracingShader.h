@@ -72,6 +72,11 @@ class RaytracingShader: public AbstractShaderProgram {
             return *this;
         }
 
+        RaytracingShader& setReflectionDecay(Float reflectionDecay) {
+            setUniform(_reflectionDecayUniform, reflectionDecay);
+            return *this;
+        }
+
         RaytracingShader& setSceneParams(UnsignedInt numObjects, UnsignedInt numLights, UnsignedInt numMeshes, UnsignedInt depth) {
             this->setNumObjects(numObjects)
                 .setNumMeshes(numMeshes)
@@ -94,7 +99,8 @@ class RaytracingShader: public AbstractShaderProgram {
             _numObjectsUniform{8},
             _numLightsUniform{9},
             _reflectionDepthUniform{10},
-            _numMeshesUniform{12};
+            _numMeshesUniform{12},
+            _reflectionDecayUniform{13};
         Int _objectBufferBindLocation{3},
             _materialBufferBindLocation{4},
             _lightBufferBindLocation{5},
