@@ -62,8 +62,6 @@ corrade_add_resource(Shaders_RESOURCES resources.conf)
 
 add_executable(magnum-raytracing
     RaytracingExample.cpp
-    SimpleShader.h
-    SimpleShader.cpp
     RaytracingShader.h
     RaytracingShader.cpp
     ${Shaders_RESOURCES})
