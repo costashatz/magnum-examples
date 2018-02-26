@@ -181,6 +181,12 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     material.shininess = 80.f;
     mats.emplace_back(material);
 
+    material.diffuse = Color4(0.8f, 0.3f, 0.f, 1.f);
+    material.specular = Color4(1.f);
+    material.emission = Color4(0.f, 0.f, 0.f, 1.f);
+    material.shininess = 80.f;
+    mats.emplace_back(material);
+
     /* bind materials buffer */
     _materialsBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.materialBufferBindLocation());
     _materialsBuffer.setData(mats, BufferUsage::DynamicCopy);
@@ -331,7 +337,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
         obj.triangle.normal.xyz() = (cross((obj.triangle.B - obj.triangle.A).xyz(), (obj.triangle.C - obj.triangle.A).xyz())).normalized();
 
         obj.meshId = 2;
-        obj.materialIndex = 0;
+        obj.materialIndex = 2;
 
         triangle_objects.emplace_back(obj);
 
