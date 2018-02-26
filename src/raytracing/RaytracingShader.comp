@@ -1,5 +1,6 @@
 #define M_PI 3.1415926535897932384626433832795
 #define FAR_CLIP  1000.0f
+#define EPS 0.01f
 #define MAX_REFLECTION_DEPTH 5
 
 /* Camera model */
@@ -46,6 +47,9 @@ struct Object {
 struct Mesh {
     /* bounding box min, max points */
     vec4 bounds[2];
+    mat4 worldToObject;
+    int objectStart;
+    int objectSize;
 };
 
 /* Ray model */
@@ -186,19 +190,22 @@ float traceTriangle(Ray r, Triangle t) {
     return tHit;
 }
 
-void traceMesh(in Ray r, in int meshId, out float tOut, out int obj) {
+void traceMesh(in Ray ray, in int meshId, out float tOut, out int obj) {
+    mat4 worldToObject = meshes[meshId].worldToObject;
+    vec4 rayPos = vec4(ray.origin, 1.);
+    vec4 finalRayPos = worldToObject * rayPos;
+    Ray r = createRay(vec3(finalRayPos) / finalRayPos.w, mat3(worldToObject) * ray.dir);
+
     tOut = FAR_CLIP;
     obj = -1;
     if(!intersectBoundingBox(r, meshId))
         return;
     float t = FAR_CLIP;
-    for(int i = 0; i < numOfObjects; i++) {
-        if(objects[i].meshId == meshId) {
-            float tHit = traceTriangle(r, objects[i].triangle);
-            if(tHit < t && tHit >= 0.) {
-                t = tHit;
-                obj = i;
-            }
+    for(int i = meshes[meshId].objectStart; i < meshes[meshId].objectStart + meshes[meshId].objectSize; i++) {
+        float tHit = traceTriangle(r, objects[i].triangle);
+        if(tHit < t && tHit >= 0.) {
+            t = tHit;
+            obj = i;
         }
     }
 
@@ -227,7 +234,7 @@ Ray getReflectionRay(Ray r, int currentObject, float t) {
     vec3 N = objects[currentObject].triangle.normal.xyz;
     vec3 dir = reflect(r.dir, N);
 
-    return createRay(hitPoint + dir * 0.001, dir);
+    return createRay(hitPoint + dir * EPS, dir);
 }
 
 /* get light brightness/attenuation */
@@ -302,7 +309,7 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
     vec3 hitPoint = r.origin + t * r.dir;
     vec3 N = objects[currentObject].triangle.normal.xyz;
 
-    hitPoint += 0.001 * N;
+    hitPoint += EPS * N;
 
     /* iterate over lights */
     for(int i = 0; i < numOfLights; i++) {
@@ -316,6 +323,7 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
 
         /* check if in shadow */
         for(int j = 0; j < numOfMeshes; j++) {
+            /* no self-shadows for now */
             if(j == objects[currentObject].meshId)
                 continue;
             int k = -1;
@@ -435,6 +443,15 @@ void main(){
             break;
         color += d * spec * reflectedColors[i];
     }
+    // mat4 worldToObject = meshes[0].worldToObject;
+    // vec4 rayPos = vec4(ray.origin, 1.);
+    // Ray r;
+    // vec4 finalRayPos = rayPos * worldToObject;
+    // r.origin = vec3(finalRayPos) / finalRayPos.w;
+    // r.dir = ray.dir * mat3(worldToObject);
+
+    // if(r.origin == ray.origin)
+    //     color.r = 1;
 
     /* store pixel into output image */
     imageStore(outputImage, ivec2(x, y), vec4(color.rgb, 1.));

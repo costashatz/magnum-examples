@@ -122,17 +122,18 @@ class RaytracingExample: public Platform::Application {
         Texture2D _outputImage;
 };
 
-class ColoredObject: public Object3D, SceneGraph::Drawable3D {
+class RayObject: public Object3D, SceneGraph::Drawable3D {
     public:
-        explicit ColoredObject(const std::vector<Examples::Object>& objects, Buffer& objectsBuffer, Object3D* parent, SceneGraph::DrawableGroup3D* group) : Object3D{parent}, SceneGraph::Drawable3D{*this, group}, _objects(std::move(objects)), _objectsBuffer{objectsBuffer} {}
+        explicit RayObject(Buffer& meshesBuffer, UnsignedInt offset, Object3D* parent, SceneGraph::DrawableGroup3D* group) : Object3D{parent}, SceneGraph::Drawable3D{*this, group}, _meshesBuffer{meshesBuffer}, _offset(offset) {}
 
     private:
         void draw(const Matrix4& /* transformationMatrix */, SceneGraph::Camera3D& /* camera */) override {
-            /* @todo: set things in object buffer */
+            UnsignedInt transformationOffset = 32;
+            _meshesBuffer.setSubData(_offset + transformationOffset, std::vector<Matrix4>(1, absoluteTransformation().invertedRigid()));
         }
 
-        std::vector<Examples::Object> _objects;
-        Buffer& _objectsBuffer;
+        Buffer& _meshesBuffer;
+        UnsignedInt _offset;
 };
 
 RaytracingExample::RaytracingExample(const Arguments& arguments):
@@ -201,7 +202,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     std::vector<Light> lights;
     lights.emplace_back(light);
 
-    light.position = Vector4(0.6f, 0.5f, 0.6f, 0.f).normalized(); // w = 0.f means directional
+    light.position = Vector4(0.6f, 0.6f, 0.6f, 0.f).normalized(); // w = 0.f means directional
     light.intensity = 0.5f;
     lights.emplace_back(light);
 
@@ -213,6 +214,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     Trade::MeshData3D cube = Primitives::Cube::solid();
 
     std::vector<Object> triangle_objects;
+    UnsignedInt startIndex = 0;
 
     Float minX = Constants::inf();
     Float minY = Constants::inf();
@@ -254,7 +256,12 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     RayMesh mBox;
     mBox.minPoint = Vector4(minX, minY, minZ, 1.f);
     mBox.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    mBox.objectStart = startIndex;
+    mBox.objectSize = triangle_objects.size() - startIndex;
+    startIndex = triangle_objects.size();
     meshes.push_back(mBox);
+    auto boxObj = new RayObject{_meshesBuffer, 0, _o, &_drawables};
+    boxObj->rotateY(Rad(Magnum::Math::Constants<Magnum::Float>::piHalf() / 2.f));
 
     minX = Constants::inf();
     minY = Constants::inf();
@@ -262,8 +269,9 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     maxX = -Constants::inf();
     maxY = -Constants::inf();
     maxZ = -Constants::inf();
+    cube = Primitives::Cube::solid();
     MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{20.f, 0.1f, 20.f}), cube.positions(0));
-    MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{0.f, -1.05f, 0.f}), cube.positions(0));
+    // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{0.f, -1.05f, 0.f}), cube.positions(0));
     /* add ground */
     for(UnsignedInt i = 0; i < cube.indices().size(); i += 3) {
         Object obj;
@@ -298,11 +306,15 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     RayMesh mGround;
     mGround.minPoint = Vector4(minX, minY, minZ, 1.f);
     mGround.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    mGround.objectStart = startIndex;
+    mGround.objectSize = triangle_objects.size() - startIndex;
+    startIndex = triangle_objects.size();
     meshes.push_back(mGround);
+    auto groundObj = new RayObject{_meshesBuffer, sizeof(RayMesh), _o, &_drawables};
+    groundObj->translate({0.f, -1.05f, 0.f});
 
     Trade::MeshData3D sphere = Primitives::Icosphere::solid(2);
-    // Debug{} << sphere.indices().size();
-    MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{4.f, 1.f, 1.f}), sphere.positions(0));
+    // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{4.f, 1.f, 1.f}), sphere.positions(0));
     /* add a sphere */
     minX = Constants::inf();
     minY = Constants::inf();
@@ -343,12 +355,17 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     RayMesh mSphere;
     mSphere.minPoint = Vector4(minX, minY, minZ, 1.f);
     mSphere.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    mSphere.objectStart = startIndex;
+    mSphere.objectSize = triangle_objects.size() - startIndex;
+    startIndex = triangle_objects.size();
     meshes.push_back(mSphere);
+    auto sphereObj = new RayObject{_meshesBuffer, 2 * sizeof(RayMesh), _o, &_drawables};
+    sphereObj->translate({4.f, 1.f, 1.f});
 
     // Trade::MeshData3D sphere2 = Primitives::Icosphere::solid(2);
     // // Debug{} << sphere.indices().size();
-    // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{-4.f, 1.f, 1.f}), sphere2.positions(0));
-    // /* add a sphere */
+    // // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{-4.f, 1.f, 1.f}), sphere2.positions(0));
+    // /* add another sphere */
     // minX = Constants::inf();
     // minY = Constants::inf();
     // minZ = Constants::inf();
@@ -388,7 +405,12 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     // RayMesh mSphere2;
     // mSphere2.minPoint = Vector4(minX, minY, minZ, 1.f);
     // mSphere2.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    // mSphere2.objectStart = startIndex;
+    // mSphere2.objectSize = triangle_objects.size() - startIndex;
+    // startIndex = triangle_objects.size();
     // meshes.push_back(mSphere2);
+    // auto sphereObj2 = new RayObject{_meshesBuffer, 3 * sizeof(RayMesh), _o, &_drawables};
+    // sphereObj2->translate({-2.f, 1.2f, -3.f});
 
     Debug{} << "Number of triangles:" << triangle_objects.size();
 
@@ -414,10 +436,10 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
 
 void RaytracingExample::drawEvent() {
     defaultFramebuffer.clear(FramebufferClear::Color);
-    Debug{} << _timeline.previousFrameDuration() * 1e3f;
+    // Debug{} << _timeline.previousFrameDuration() * 1e3f;
     /* refresh camera */
     refreshCamera();
-    // _camera->draw(_drawables);
+    _camera->draw(_drawables);
     Renderer::setMemoryBarrier(Renderer::MemoryBarrier::TextureUpdate | Renderer::MemoryBarrier::ShaderStorage | Renderer::MemoryBarrier::BufferUpdate);
     /* zero image and re-bind */
     refreshTexture(defaultFramebuffer.viewport().size());

@@ -23,6 +23,7 @@
 
 #include "Magnum/Magnum.h"
 #include "Magnum/Math/Color.h"
+#include "Magnum/Math/Matrix4.h"
 #include "Magnum/Math/Vector3.h"
 
 namespace Magnum { namespace Examples {
@@ -71,6 +72,10 @@ struct RayMesh {
     /* bounding box min, max points */
     Vector4 minPoint;
     Vector4 maxPoint;
+    Matrix4 matrix;
+    Int objectStart;
+    Int objectSize;
+    Vector2 dummy; /* for glsl alignment */
 };
 
 /* Light model */
