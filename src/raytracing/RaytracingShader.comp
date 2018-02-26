@@ -122,10 +122,6 @@ Ray createRay(vec3 origin, vec3 dir) {
 }
 
 bool intersectBoundingBox(Ray r, int meshId) {
-    /* sanity check */
-    if(meshId < 0)
-        return false;
-
     Mesh m = meshes[meshId];
     float tmin, tmax, tymin, tymax, tzmin, tzmax;
 
@@ -153,7 +149,6 @@ bool intersectBoundingBox(Ray r, int meshId) {
 }
 
 /* triangle ray-tracing */
-/* todo: check if this is correct */
 float traceTriangle(Ray r, Triangle t) {
     vec3 AB = t.B.xyz - t.A.xyz;
     vec3 AC = t.C.xyz - t.A.xyz;

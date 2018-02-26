@@ -442,7 +442,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
 
 void RaytracingExample::drawEvent() {
     defaultFramebuffer.clear(FramebufferClear::Color);
-    // Debug{} << _timeline.previousFrameDuration() * 1e3f;
+    Debug{} << std::round(1.f / _timeline.previousFrameDuration()) << "FPS";
     /* refresh camera */
     refreshCamera();
     _camera->draw(_drawables);
