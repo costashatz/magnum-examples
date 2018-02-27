@@ -27,6 +27,37 @@
 
 namespace Magnum { namespace Examples {
 
+/* types for glsl communication */
+struct RayOctreeObject {
+    Int objectId;
+    Int nextObject;
+};
+
+struct RayOctreeNode {
+    /* bounding box min, max points */
+    Vector4 minPoint;
+    Vector4 maxPoint;
+    Int childObject;
+    Int childrenIds[8];
+    Vector3 dummy; /* for glsl alignment */
+};
+
+/* Octree */
+class OctreeObject {
+    public:
+        typedef SceneGraph::Object<SceneGraph::MatrixTransformation3D> Object3D;
+        explicit OctreeObject(Object3D* object, const Object& triangle, UnsignedInt id) : _object(object), _triangle(triangle), _id(id) {}
+
+        Object3D* object() { return _object; }
+        Object triangle() { return _triangle; }
+        UnsignedInt id() { return _id; }
+
+    private:
+        Object3D* _object;
+        Object _triangle;
+        UnsignedInt _id;
+};
+
 struct BoundingBox {
     Vector3 _size;
     Vector3 _minPoint, _maxPoint;
@@ -52,7 +83,12 @@ struct BoundingBox {
         return true;
     }
 
-    bool contains(const Triangle& tri) {
+    bool contains(OctreeObject* object) {
+        Matrix4 mat = object->object()->absoluteTransformationMatrix();
+        Triangle tri = object->triangle().triangle;
+        tri.A = mat * Vector4(tri.A.xyz(), 1.f);
+        tri.B = mat * Vector4(tri.B.xyz(), 1.f);
+        tri.C = mat * Vector4(tri.C.xyz(), 1.f);
         for(UnsignedInt i = 0; i < 3; i++) {
             if(tri.A[i] > _maxPoint[i] || tri.A[i] < _minPoint[i])
                 return false;
@@ -73,7 +109,59 @@ class OctreeNode {
 
         OctreeNode* parent() { return _parent; }
         OctreeNode* child(UnsignedInt i) { return _children[i]; }
-        std::vector<Object*> objects() { return _objects; }
+        std::vector<OctreeObject*> objects() { return _objects; }
+
+        std::tuple<std::vector<RayOctreeNode>, std::vector<RayOctreeObject>> getRayObjects(UnsignedInt objectIndex = 0, UnsignedInt nodeIndex = 0) {
+            std::vector<RayOctreeNode> octreeNodes;
+            std::vector<RayOctreeObject> octreeObjects;
+
+            for(UnsignedInt i = 0; i < _objects.size(); i++) {
+                RayOctreeObject obj;
+                obj.objectId = _objects[i]->id();
+                obj.nextObject = objectIndex + i + 1;
+                if(i == _objects.size()-1)
+                    obj.nextObject = -1;
+                octreeObjects.push_back(obj);
+            }
+
+            RayOctreeNode node;
+            node.minPoint.xyz() = _bounds._minPoint;
+            node.maxPoint.xyz() = _bounds._maxPoint;
+            if(_objects.size() > 0)
+                node.childObject = objectIndex;
+            else
+                node.childObject = -1;
+            UnsignedInt numOfChildren = 0;
+            for(UnsignedInt i = 0; i < 8; i++) {
+                if(_children[i]) {
+                    node.childrenIds[i] = nodeIndex + numOfChildren;
+                    numOfChildren++;
+                }
+                else
+                    node.childrenIds[i] = -1;
+            }
+            octreeNodes.push_back(node);
+
+            UnsignedInt numOfPreviousNodes = 0;
+            UnsignedInt numOfPreviousObjects = 0;
+            for(UnsignedInt i = 0; i < 8; i++) {
+                if(_children[i] && (_activeNodes & (1<<i))) {
+                    /* get data from valid children */
+                    std::vector<RayOctreeNode> childOctreeNodes;
+                    std::vector<RayOctreeObject> childOctreeObjects;
+                    std::tie(childOctreeNodes, childOctreeObjects) = _children[i]->getRayObjects(numOfPreviousObjects + objectIndex + _objects.size(), numOfPreviousNodes + nodeIndex + numOfChildren);
+
+                    /* insert nodes and objects */
+                    octreeNodes.insert(octreeNodes.end(), childOctreeNodes.begin(), childOctreeNodes.end());
+                    numOfPreviousNodes += childOctreeNodes.size();
+                    numOfPreviousObjects += childOctreeObjects.size();
+                    if(childOctreeObjects.size() > 0)
+                        octreeObjects.insert(octreeObjects.end(), childOctreeObjects.begin(), childOctreeObjects.end());
+                }
+            }
+
+            return std::make_tuple(octreeNodes, octreeObjects);
+        }
 
         unsigned char activeNodes() { return _activeNodes; }
 
@@ -84,7 +172,7 @@ class OctreeNode {
             return *this;
         }
 
-        OctreeNode& insertObject(Object* object) {
+        OctreeNode& insertObject(OctreeObject* object) {
             /* if the tree is not built, just add it to the list of objects */
             if(!_treeBuilt) {
                 _objects.push_back(object);
@@ -120,12 +208,13 @@ class OctreeNode {
             octant[6] = (_children[6]) ? _children[6]->_bounds : BoundingBox(center, _bounds._maxPoint);
             octant[7] = (_children[7]) ? _children[7]->_bounds : BoundingBox({_bounds._minPoint.x(), center.y(), center.z()}, {center.x(), _bounds._maxPoint.y(), _bounds._maxPoint.z()});
 
-            if(_bounds.contains(object->triangle)) {
+            if(_parent || _bounds.contains(object)) {
                 bool found = false;
                 for(UnsignedInt i = 0; i < 8; i++) {
-                    if(octant[i].contains(object->triangle)) {
+                    if(octant[i].contains(object)) {
                         if(!_children[i]) {
                             _children[i] = new OctreeNode(octant[i], this);
+                            _children[i]->buildTree();
                             _activeNodes |= (1 << i);
                         }
                         _children[i]->insertObject(object);
@@ -155,7 +244,7 @@ class OctreeNode {
         /* Actual things */
         OctreeNode* _children[8];
         OctreeNode* _parent = nullptr;
-        std::vector<Object*> _objects;//, _pendingObjects;
+        std::vector<OctreeObject*> _objects;
 
         OctreeNode& buildTree() {
             /* if just one object or empty, return */
@@ -186,11 +275,11 @@ class OctreeNode {
             /* create the children nodes */
             for(UnsignedInt i = 0; i < 8; i++) _children[i] = new OctreeNode(octant[i], this);
 
-            std::vector<Object*> toRemove;
+            std::vector<OctreeObject*> toRemove;
 
-            for(Object* obj : _objects) {
+            for(OctreeObject* obj : _objects) {
                 for(UnsignedInt i = 0; i < 8; i++) {
-                    if(octant[i].contains(obj->triangle)) {
+                    if(octant[i].contains(obj)) {
                         _children[i]->insertObject(obj);
                         toRemove.emplace_back(obj);
                         break;
@@ -200,7 +289,7 @@ class OctreeNode {
 
             /* remove moved objects */
             /* @todo: make it better than this */
-            for(Object* obj : toRemove)
+            for(OctreeObject* obj : toRemove)
                 _objects.erase(std::remove(_objects.begin(), _objects.end(), obj));
 
             /* build the children trees */

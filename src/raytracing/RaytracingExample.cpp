@@ -52,8 +52,45 @@
 #include <Magnum/Trade/MeshData3D.h>
 
 #include "RaytracingShader.h"
+#include "Octree.h"
 
 namespace Magnum { namespace Examples {
+
+static int octreeChildren(OctreeNode* node) {
+    if(!node->activeNodes())
+        return 1;
+    int c = 1;
+    for(UnsignedInt i = 0; i < 8; i++) {
+        if(node->activeNodes() & (1 << i)) {
+            c += octreeChildren(node->child(i));
+        }
+    }
+    return c;
+}
+
+static int octreeDepth(OctreeNode* node, int d = 0) {
+    if(!node->activeNodes())
+        return d;
+    int c = d;
+    for(UnsignedInt i = 0; i < 8; i++) {
+        if(node->activeNodes() & (1 << i)) {
+            c = std::max(d+1, octreeDepth(node->child(i), d+1));
+        }
+    }
+    return c;
+}
+
+static int octreeMaxTri(OctreeNode* node) {
+    if(!node->activeNodes())
+        return node->objects().size();
+    int c = node->objects().size();
+    for(UnsignedInt i = 0; i < 8; i++) {
+        if(node->activeNodes() & (1 << i)) {
+            c = std::max(c, octreeMaxTri(node->child(i)));
+        }
+    }
+    return c;
+}
 
 typedef SceneGraph::Object<SceneGraph::MatrixTransformation3D> Object3D;
 typedef SceneGraph::Scene<SceneGraph::MatrixTransformation3D> Scene3D;
@@ -119,6 +156,8 @@ class RaytracingExample: public Platform::Application {
         Buffer _materialsBuffer;
         Buffer _lightsBuffer;
         Buffer _meshesBuffer;
+        Buffer _octreeObjectBuffer;
+        Buffer _octreeNodeBuffer;
         Texture2D _outputImage;
 };
 
@@ -219,6 +258,8 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     /* create cube and set object buffer */
     Trade::MeshData3D cube = Primitives::Cube::solid();
 
+    OctreeNode octreeRoot({64, 64, 64});
+
     std::vector<Object> triangle_objects;
     UnsignedInt startIndex = 0;
 
@@ -259,6 +300,12 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
                 maxZ = vec.z();
         }
     }
+    auto boxObj = new RayObject{_meshesBuffer, 0, _o, &_drawables};
+    boxObj->rotateY(Rad(Magnum::Math::Constants<Magnum::Float>::piHalf() / 2.f));
+    /* add triangles to octree */
+    for(UnsignedInt i = startIndex; i < triangle_objects.size(); i++) {
+        octreeRoot.insertObject(new OctreeObject(boxObj, triangle_objects[i], i));
+    }
     RayMesh mBox;
     mBox.minPoint = Vector4(minX, minY, minZ, 1.f);
     mBox.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
@@ -266,8 +313,6 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     mBox.objectSize = triangle_objects.size() - startIndex;
     startIndex = triangle_objects.size();
     meshes.push_back(mBox);
-    auto boxObj = new RayObject{_meshesBuffer, 0, _o, &_drawables};
-    boxObj->rotateY(Rad(Magnum::Math::Constants<Magnum::Float>::piHalf() / 2.f));
 
     minX = Constants::inf();
     minY = Constants::inf();
@@ -276,7 +321,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     maxY = -Constants::inf();
     maxZ = -Constants::inf();
     cube = Primitives::Cube::solid();
-    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{20.f, 0.1f, 20.f}), cube.positions(0));
+    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{20.f, 0.1f, 20.f}*0.5f), cube.positions(0));
     // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{0.f, -1.05f, 0.f}), cube.positions(0));
     /* add ground */
     for(UnsignedInt i = 0; i < cube.indices().size(); i += 3) {
@@ -309,6 +354,12 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
                 maxZ = vec.z();
         }
     }
+    auto groundObj = new RayObject{_meshesBuffer, sizeof(RayMesh), _o, &_drawables};
+    groundObj->translate({0.f, -1.05f, 0.f});
+    /* add triangles to octree */
+    for(UnsignedInt i = startIndex; i < triangle_objects.size(); i++) {
+        octreeRoot.insertObject(new OctreeObject(groundObj, triangle_objects[i], i));
+    }
     RayMesh mGround;
     mGround.minPoint = Vector4(minX, minY, minZ, 1.f);
     mGround.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
@@ -316,8 +367,6 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     mGround.objectSize = triangle_objects.size() - startIndex;
     startIndex = triangle_objects.size();
     meshes.push_back(mGround);
-    auto groundObj = new RayObject{_meshesBuffer, sizeof(RayMesh), _o, &_drawables};
-    groundObj->translate({0.f, -1.05f, 0.f});
 
     Trade::MeshData3D sphere = Primitives::Icosphere::solid(2);
     // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{4.f, 1.f, 1.f}), sphere.positions(0));
@@ -358,6 +407,12 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
                 maxZ = vec.z();
         }
     }
+    auto sphereObj = new RayObject{_meshesBuffer, 2 * sizeof(RayMesh), _o, &_drawables};
+    sphereObj->translate({4.f, 1.f, 1.f});
+    /* add triangles to octree */
+    for(UnsignedInt i = startIndex; i < triangle_objects.size(); i++) {
+        octreeRoot.insertObject(new OctreeObject(sphereObj, triangle_objects[i], i));
+    }
     RayMesh mSphere;
     mSphere.minPoint = Vector4(minX, minY, minZ, 1.f);
     mSphere.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
@@ -365,8 +420,45 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     mSphere.objectSize = triangle_objects.size() - startIndex;
     startIndex = triangle_objects.size();
     meshes.push_back(mSphere);
-    auto sphereObj = new RayObject{_meshesBuffer, 2 * sizeof(RayMesh), _o, &_drawables};
-    sphereObj->translate({4.f, 1.f, 1.f});
+
+    Debug{} << "Let's create the octree";
+    octreeRoot.update();
+    Debug{} << "Created";
+
+    Debug{} << "Total number of active nodes: " << octreeChildren(&octreeRoot);
+    Debug{} << "Total depth: " << octreeDepth(&octreeRoot);
+    Debug{} << "Triangles in root node: " << octreeRoot.objects().size();
+    // Debug{} << octreeRoot.objects()[90]->triangle().meshId;
+    Debug{} << "Max triangles in node: " << octreeMaxTri(&octreeRoot);
+
+    std::vector<RayOctreeNode> octreeNodes;
+    std::vector<RayOctreeObject> octreeObjects;
+    std::tie(octreeNodes, octreeObjects) = octreeRoot.getRayObjects();
+    Debug{} << "Nodes:" << octreeNodes.size();
+    Debug{} << "Objects:" << octreeObjects.size();
+    // for(int i=0;i<8;i++) {
+    //     Debug{} << octreeNodes[0].childrenIds[i];
+    // }
+    // Debug{}<<"-----";
+    // for(int i=0;i<8;i++) {
+    //     Debug{} << octreeNodes[1].childrenIds[i];
+    // }
+    // Debug{}<<"-----";
+    // for(int i=0;i<8;i++) {
+    //     Debug{} << octreeNodes[2].childrenIds[i];
+    // }
+    // Debug{}<<"-----";
+    // for(int i=0;i<8;i++) {
+    //     Debug{} << octreeNodes[3].childrenIds[i];
+    // }
+
+    /* bind octree buffers */
+    _octreeObjectBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.octreeObjectBufferBindLocation());
+    _octreeNodeBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.octreeNodeBufferBindLocation());
+
+    /* set octree data */
+    _octreeObjectBuffer.setData(octreeObjects, BufferUsage::DynamicCopy);
+    _octreeNodeBuffer.setData(octreeNodes, BufferUsage::DynamicCopy);
 
     // Trade::MeshData3D sphere2 = Primitives::Icosphere::solid(2);
     // // Debug{} << sphere.indices().size();
@@ -437,7 +529,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     setMinimalLoopPeriod(16);
     _timeline.start();
 
-    redraw();
+    // redraw();
 }
 
 void RaytracingExample::drawEvent() {
@@ -458,7 +550,7 @@ void RaytracingExample::drawEvent() {
     mesh.setCount(3)
         .draw(_renderShader);
     swapBuffers();
-    redraw();
+    // redraw();
     _timeline.nextFrame();
 }
 

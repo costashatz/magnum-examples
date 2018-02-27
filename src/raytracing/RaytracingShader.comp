@@ -52,6 +52,26 @@ struct Mesh {
     int objectSize;
 };
 
+/* Octree node */
+struct OctreeNode {
+    /* bounding box min, max points */
+    vec4 bounds[2];
+    int childObject;
+    int childrenIds[8];
+};
+
+/* OctreeObject */
+struct OctreeObject {
+    int objectId;
+    int nextObject;
+};
+
+/* Helper FIFO queue */
+struct QueueNode {
+    int nodeId;
+    int nextQueueNode;
+};
+
 /* Ray model */
 struct Ray {
     vec3 origin;
@@ -93,6 +113,14 @@ layout(std430, binding = 11) buffer MeshBuffer {
     Mesh meshes[];
 };
 
+layout(std430, binding = 14) buffer OctreeObjectBuffer {
+    OctreeObject octreeObjects[];
+};
+
+layout(std430, binding = 15) buffer OctreeNodeBuffer {
+    OctreeNode octreeNodes[];
+};
+
 /* camera */
 layout(location = 0) uniform Camera camera;
 /* viewport */
@@ -104,6 +132,7 @@ layout(location = 9) uniform uint numOfLights = 0;
 layout(location = 10) uniform uint reflectionDepth = 2;
 layout(location = 12) uniform uint numOfMeshes = 0;
 layout(location = 13) uniform float reflectionDecay = 0.8;
+// layout(location = 16) uniform uint octreeDepth = 1;
 
 /* output image */
 layout(binding = 6, RGBA8) writeonly uniform image2D outputImage;
@@ -284,6 +313,108 @@ bool intersected(Light light, float tHit, vec3 previousHitPoint) {
     return false;
 }
 
+/* octree intersection */
+void traceNode(in Ray ray, in int nodeId, out float tOut, out int obj) {
+    tOut = FAR_CLIP;
+    obj = -1;
+
+    int currentNodeObject = octreeNodes[nodeId].childObject;
+    while(currentNodeObject >= 0) {
+        int currentObject = octreeObjects[currentNodeObject].objectId;
+
+        /* transform ray */
+        mat4 worldToObject = meshes[objects[currentObject].meshId].worldToObject;
+        vec4 rayPos = vec4(ray.origin, 1.);
+        vec4 finalRayPos = worldToObject * rayPos;
+        Ray r = createRay(vec3(finalRayPos) / finalRayPos.w, mat3(worldToObject) * ray.dir);
+
+        /* do the actual tracing */
+        float t = traceTriangle(r, objects[currentObject].triangle);
+        if(t < tOut && t >= 0.) {
+            tOut = t;
+            obj = currentObject;
+        }
+
+        currentNodeObject = octreeObjects[currentNodeObject].nextObject;
+    }
+}
+
+bool intersectOctreeNode(Ray r, int nodeId) {
+    OctreeNode m = octreeNodes[nodeId];
+    float tmin, tmax, tymin, tymax, tzmin, tzmax;
+
+    tmin = (m.bounds[r.signs[0]].x - r.origin.x) * r.invDir.x;
+    tmax = (m.bounds[1 - r.signs[0]].x - r.origin.x) * r.invDir.x;
+    tymin = (m.bounds[r.signs[1]].y - r.origin.y) * r.invDir.y;
+    tymax = (m.bounds[1 - r.signs[1]].y - r.origin.y) * r.invDir.y;
+    if((tmin > tymax) || (tymin > tmax))
+        return false;
+    if(tymin > tmin)
+        tmin = tymin;
+    if(tymax < tmax)
+        tmax = tymax;
+    tzmin = (m.bounds[r.signs[2]].z - r.origin.z) * r.invDir.z;
+    tzmax = (m.bounds[1 - r.signs[2]].z - r.origin.z) * r.invDir.z;
+
+    if((tmin > tzmax) || (tzmin > tmax))
+        return false;
+    if(tzmin > tmin)
+        tmin = tzmin;
+    if(tzmax < tmax)
+        tmax = tzmax;
+
+    return tmax > 0. && tmin > 0.;
+}
+
+void traceOctree(in Ray ray, out float tOut, out int obj) {
+    tOut = FAR_CLIP;
+    obj = -1;
+
+    /* max queue size 8^3 */
+    int maxQueueSize = 512;
+    QueueNode queue[512];
+    int currSize = 1;
+    int currPoint = 0;
+    /* zero is the root node */
+    int currentNode = 0;
+    queue[0].nodeId = currentNode;
+    queue[0].nextQueueNode = 1;
+    queue[1].nodeId = -1;
+
+    while(queue[currPoint].nodeId >= 0) {
+        currentNode = queue[currPoint].nodeId;
+        queue[currPoint].nodeId = -1;
+        if(queue[currPoint].nextQueueNode < 0)
+            break;
+        currPoint = queue[currPoint].nextQueueNode;
+
+        /* trace objects of current node */
+        float t;
+        int k;
+        traceNode(ray, currentNode, t, k);
+        if(t < tOut && t >= 0.) {
+            tOut = t;
+            obj = k;
+        }
+
+        for(int i = 0; i < 8; i++) {
+            if(octreeNodes[currentNode].childrenIds[i] >= 0 && intersectOctreeNode(ray, octreeNodes[currentNode].childrenIds[i])) {
+                queue[currSize].nodeId = octreeNodes[currentNode].childrenIds[i];
+
+                /* @todo: fix indexing */
+                queue[currSize].nextQueueNode = currSize + 1;
+                queue[queue[currSize].nextQueueNode].nodeId = -1;
+                /* reset size -- this might lead to losing some nodes in very big and detailed octrees */
+                if(currSize >= maxQueueSize - 1) {
+                    queue[currSize].nextQueueNode = 0;
+                    currSize = 0;
+                }
+                currSize = currSize + 1;
+            }
+        }
+    }
+}
+
 /* calculate color of at ray/triangle intersection */
 vec4 calculateColor(Ray r, float t, int currentObject) {
     /* todo: add only rgb components; see what to do with alpha */
@@ -329,6 +460,11 @@ vec4 calculateColor(Ray r, float t, int currentObject) {
                 break;
             }
         }
+        // float tHit = FAR_CLIP;
+        // int k = -1;
+        // traceOctree(lightRay, tHit, k);
+        // if(intersected(lights[i], tHit, hitPoint))
+        //     inShadow = true;
 
         float intensity = dot(N, normalizedLightDirection);
 
@@ -392,6 +528,7 @@ void main(){
                 t = tHit;
             }
         }
+        // traceOctree(ray, t, currentObject);
 
         /* save if there was a hit or not */
         valid[i] = currentObject;
@@ -438,15 +575,6 @@ void main(){
             break;
         color += d * spec * reflectedColors[i];
     }
-    // mat4 worldToObject = meshes[0].worldToObject;
-    // vec4 rayPos = vec4(ray.origin, 1.);
-    // Ray r;
-    // vec4 finalRayPos = rayPos * worldToObject;
-    // r.origin = vec3(finalRayPos) / finalRayPos.w;
-    // r.dir = ray.dir * mat3(worldToObject);
-
-    // if(r.origin == ray.origin)
-    //     color.r = 1;
 
     /* store pixel into output image */
     imageStore(outputImage, ivec2(x, y), vec4(color.rgb, 1.));

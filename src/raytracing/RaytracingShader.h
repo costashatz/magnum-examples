@@ -89,6 +89,8 @@ class RaytracingShader: public AbstractShaderProgram {
         Int materialBufferBindLocation() { return _materialBufferBindLocation; }
         Int lightBufferBindLocation() { return _lightBufferBindLocation; }
         Int meshBufferBindLocation() { return _meshBufferBindLocation; }
+        Int octreeObjectBufferBindLocation() { return _octreeObjectBufferBindLocation; }
+        Int octreeNodeBufferBindLocation() { return _octreeNodeBufferBindLocation; }
 
         RaytracingShader& setOutputTexture(Texture2D& texture);
 
@@ -105,7 +107,9 @@ class RaytracingShader: public AbstractShaderProgram {
             _materialBufferBindLocation{4},
             _lightBufferBindLocation{5},
             _outputTextureBindLocation{6},
-            _meshBufferBindLocation{11};
+            _meshBufferBindLocation{11},
+            _octreeObjectBufferBindLocation{14},
+            _octreeNodeBufferBindLocation{15};
 };
 
 }}
