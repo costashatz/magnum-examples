@@ -82,8 +82,8 @@ class GlobalIlluminationExample: public Platform::Application {
         VoxelizationShader _voxelShader;
         VoxelVisualizationShader _voxelVisualShader;
         Texture3D _voxelTexture;
-        const Int _voxelDimensions = 64;
-        const Float _voxelGridWorldSize = 20.0f;
+        const Int _voxelDimensions = 128;
+        const Float _voxelGridWorldSize = 10.0f;
         Matrix4 _voxelProjectionMatX, _voxelProjectionMatY, _voxelProjectionMatZ;
         Mesh _debugVoxelsMesh;
         Buffer _dummy;
@@ -163,7 +163,19 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
 
     Color4 cubeColor = Color4(0.5f, 0.5f, 0.5f, 1.f);
     /* Create cube object for being voxelized */
-    (new VoxelizedObject(cubeMesh, cubeColor, _voxelShader, _o, &_voxels));//->translate(Vector3{-1.f, 1.f, -1.f});
+    (new VoxelizedObject(cubeMesh, cubeColor, _voxelShader, _o, &_voxels))->rotateY(65.0_degf);
+
+    /* Create sphere */
+    Trade::MeshData3D sphere = Primitives::Icosphere::solid(4);
+    std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(sphere, BufferUsage::StaticDraw);
+    BufferMesh sphereMesh;
+    sphereMesh.mesh = std::unique_ptr<Mesh>(new Mesh{std::move(mesh)});
+    sphereMesh.vertexBuffer = std::move(vertexBuffer);
+    sphereMesh.indexBuffer = std::move(indexBuffer);
+
+    Color4 sphereColor = Color4(0.8f, 0.2f, 0.2f, 1.f);
+    /* Create sphere object for being voxelized */
+    (new VoxelizedObject(sphereMesh, sphereColor, _voxelShader, _o, &_voxels))->translate(Vector3{-2.f, 2.f, -1.f}).rotateY(65.0_degf);
 
     /* Loop at 60 Hz max */
     setSwapInterval(1);
@@ -197,7 +209,8 @@ void GlobalIlluminationExample::drawEvent() {
     _voxelTexture.setSubImage(0, {}, image).generateMipmap();
 
     /* set voxel shader parameters */
-    _voxelShader.setProjectionMatrixX(_voxelProjectionMatX)
+    _voxelShader.setVoxelSize(_voxelGridWorldSize / static_cast<Float>(_voxelDimensions))
+                .setProjectionMatrixX(_voxelProjectionMatX)
                 .setProjectionMatrixY(_voxelProjectionMatY)
                 .setProjectionMatrixZ(_voxelProjectionMatZ)
                 .setVoxelDimensions(_voxelDimensions)
@@ -230,8 +243,7 @@ void GlobalIlluminationExample::drawEvent() {
 	Matrix4 viewMatrix = _camera->cameraMatrix();
 	Matrix4 transformationMatrix = _camera->projectionMatrix() * viewMatrix * modelMatrix;
 
-    _voxelVisualShader.setVoxelSize(_voxelGridWorldSize / static_cast<Float>(_voxelDimensions))
-                      .setVoxelDimensions(_voxelDimensions)
+    _voxelVisualShader.setVoxelDimensions(_voxelDimensions)
                       .setTransformationMatrix(transformationMatrix)
                       .setVoxelTexture(_voxelTexture);
     _debugVoxelsMesh.draw(_voxelVisualShader);

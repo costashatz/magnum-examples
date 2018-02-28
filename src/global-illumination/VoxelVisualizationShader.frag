@@ -6,9 +6,10 @@ in vec4 fragColor;
 out vec4 color;
 
 void main() {
+	/* ignore not visible objects */
 	if(fragColor.a < 0.5)
 		discard;
-    
+
 	/* dummy lighting to see the voxels better */
 	vec3 normalizedTransformedNormal = normalize(normal);
 	/* light 1 */

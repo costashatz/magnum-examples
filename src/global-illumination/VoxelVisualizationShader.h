@@ -57,14 +57,6 @@ class VoxelVisualizationShader: public AbstractShaderProgram {
         explicit VoxelVisualizationShader(NoCreateT) noexcept: AbstractShaderProgram{NoCreate} {}
 
         /**
-         * @brief Set voxel world size
-         */
-        VoxelVisualizationShader& setVoxelSize(Float voxelSize) {
-            setUniform(_voxelSizeUniform, voxelSize);
-            return *this;
-        }
-
-        /**
          * @brief Set voxel dimensions
          */
         VoxelVisualizationShader& setVoxelDimensions(Int voxelDimensions) {
@@ -86,8 +78,7 @@ class VoxelVisualizationShader: public AbstractShaderProgram {
         VoxelVisualizationShader& setVoxelTexture(Texture3D& texture);
 
     private:
-        Int _voxelSizeUniform{0},
-            _voxelDimsUniform{1},
+        Int _voxelDimsUniform{1},
             _transformationMatrixUniform{2};
         Int _voxelTextureBinding{0};
 };

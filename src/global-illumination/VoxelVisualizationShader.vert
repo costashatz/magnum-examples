@@ -1,6 +1,4 @@
 /* uniforms */
-layout(location = 0)
-uniform float voxelSize;
 layout(location = 1)
 uniform int voxelDimensions;
 

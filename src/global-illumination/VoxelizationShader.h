@@ -154,6 +154,14 @@ class VoxelizationShader: public AbstractShaderProgram {
         }
 
         /**
+         * @brief Set voxel world size
+         */
+        VoxelizationShader& setVoxelSize(Float voxelSize) {
+            setUniform(_voxelSizeUniform, voxelSize);
+            return *this;
+        }
+
+        /**
          * @brief Set voxel texture
          */
         VoxelizationShader& setVoxelTexture(Texture3D& texture);
@@ -170,7 +178,8 @@ class VoxelizationShader: public AbstractShaderProgram {
             _projectionMatrixYUniform{2},
             _projectionMatrixZUniform{3},
             _diffuseColorUniform{4},
-            _voxelDimsUniform{5};
+            _voxelDimsUniform{5},
+            _voxelSizeUniform{6};
         Int _voxelTextureBinding{0},
             _diffuseTextureBinding{1};
 };
