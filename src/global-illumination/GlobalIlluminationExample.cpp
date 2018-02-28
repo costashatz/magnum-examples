@@ -40,6 +40,7 @@
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Primitives/Cube.h>
+#include <Magnum/Primitives/Icosphere.h>
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/MatrixTransformation3D.h>
@@ -119,7 +120,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     _voxelTexture.setMagnificationFilter(Sampler::Filter::Nearest)
                  .setMinificationFilter(Sampler::Filter::Linear, Sampler::Mipmap::Linear)
                  .setWrapping(Sampler::Wrapping::ClampToBorder)
-                 .setStorage(7, TextureFormat::RGBA8, {_voxelDimensions, _voxelDimensions, _voxelDimensions})
+                 .setStorage(7, TextureFormat::RGBA8, Vector3i{_voxelDimensions})
                  .setSubImage(0, {}, image)
                  .generateMipmap();
 
@@ -128,15 +129,10 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
      * */
 	Float size = _voxelGridWorldSize;
     Matrix4 projectionMatrix = Matrix4::orthographicProjection({size, size}, size * 0.5f, size * 1.5f);
-    _voxelProjectionMatX = projectionMatrix * Matrix4::lookAt({size, 0.f, 0.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f});
-    _voxelProjectionMatY = projectionMatrix * Matrix4::lookAt({0.f, size, 0.f}, {0.f, 0.f, 0.f}, {0.f, 0.f, -1.f});
-    _voxelProjectionMatZ = projectionMatrix * Matrix4::lookAt({0.f, 0.f, size}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f});
-
-    // /* set voxel shader global/static parameters */
-    // _voxelShader.setProjectionMatrixX(_voxelProjectionMatX)
-    //             .setProjectionMatrixY(_voxelProjectionMatY)
-    //             .setProjectionMatrixZ(_voxelProjectionMatZ)
-    //             .setVoxelDimensions(_voxelDimensions);
+    /* Magnum has inverted lookAt compared to glm/GL */
+    _voxelProjectionMatX = projectionMatrix * Matrix4::lookAt({size, 0.f, 0.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}).invertedRigid();
+    _voxelProjectionMatY = projectionMatrix * Matrix4::lookAt({0.f, size, 0.f}, {0.f, 0.f, 0.f}, {0.f, 0.f, -1.f}).invertedRigid();
+    _voxelProjectionMatZ = projectionMatrix * Matrix4::lookAt({0.f, 0.f, size}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}).invertedRigid();
 
     /* create debug mesh for drawing voxels */
     _debugVoxelsMesh.setPrimitive(MeshPrimitive::Points)
@@ -149,23 +145,14 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
         .setProjectionMatrix(Matrix4::perspectiveProjection(35.0_degf, 1.0f, 0.01f, 100.0f))
         .setViewport(defaultFramebuffer.viewport().size());
     
-    /* Camera located at (0,0,10) looking in the center */
-    _cameraObject->setTransformation(Matrix4::lookAt({0.f, 0.f, 10.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
-
-    // /* set voxel visualization global/static parameters */
-    // Matrix4 modelMatrix = Matrix4::scaling(Vector3{_voxelGridWorldSize / static_cast<Float>(_voxelDimensions)});
-	// Matrix4 viewMatrix = _camera->cameraMatrix();
-	// Matrix4 transformationMatrix = _camera->projectionMatrix() * viewMatrix * modelMatrix;
-
-    // _voxelVisualShader.setVoxelSize(_voxelGridWorldSize / static_cast<Float>(_voxelDimensions))
-    //                   .setVoxelDimensions(_voxelDimensions)
-    //                   .setTransformationMatrix(transformationMatrix);
+    /* Camera located at (2,3,10) looking in the center */
+    _cameraObject->setTransformation(Matrix4::lookAt({2.f, 3.f, 10.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
 
     /* Default object, parent of all */
     _o = new Object3D{&_scene};
 
     /* Create cube */
-    Trade::MeshData3D cube = Primitives::Cube::solid();
+    Trade::MeshData3D cube = Primitives::Cube::solid(); //Primitives::Icosphere::solid(4);
     Mesh mesh{NoCreate};
     std::unique_ptr<Buffer> vertexBuffer, indexBuffer;
     std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(cube, BufferUsage::StaticDraw);
@@ -176,7 +163,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
 
     Color4 cubeColor = Color4(0.5f, 0.5f, 0.5f, 1.f);
     /* Create cube object for being voxelized */
-    new VoxelizedObject(cubeMesh, cubeColor, _voxelShader, _o, &_voxels);
+    (new VoxelizedObject(cubeMesh, cubeColor, _voxelShader, _o, &_voxels));//->translate(Vector3{-1.f, 1.f, -1.f});
 
     /* Loop at 60 Hz max */
     setSwapInterval(1);
@@ -187,26 +174,27 @@ void GlobalIlluminationExample::drawEvent() {
     Range2Di viewport = defaultFramebuffer.viewport();
     Vector2i viewportSize = viewport.size();
 
+    /* change viewport size */
+    defaultFramebuffer.setViewport({{}, {_voxelDimensions, _voxelDimensions}});
+    _camera->setViewport({_voxelDimensions, _voxelDimensions});
+
+    /* set clear color to white */
+    Renderer::setClearColor(Color4{1.f});
+    /* clear color and depth */
+    defaultFramebuffer.clear(FramebufferClear::Color | FramebufferClear::Depth);
+
     /* disable depth test and face culling */
     Renderer::setColorMask(false, false, false, false);
     Renderer::disable(Renderer::Feature::DepthTest);
     Renderer::disable(Renderer::Feature::FaceCulling);
     // Renderer::disable(Renderer::Feature::Blending);
-
-    /* set clear color to white */
-    Renderer::setClearColor(Color4{1.f});
+    // // conservative rasterization?
+    // Renderer::enable(Renderer::Feature(0x9346));
 
     /* clear voxelTexture */
     Containers::Array<Color4ub> tmp{Containers::DirectInit, Math::pow<3>(static_cast<UnsignedInt>(_voxelDimensions)), Color4ub(0, 0)};
     ImageView3D image{PixelFormat::RGBA, PixelType::UnsignedByte, Vector3i{_voxelDimensions}, tmp};
     _voxelTexture.setSubImage(0, {}, image).generateMipmap();
-
-    /* change viewport size */
-    defaultFramebuffer.setViewport({{}, {_voxelDimensions, _voxelDimensions}});
-    _camera->setViewport({_voxelDimensions, _voxelDimensions});
-
-    /* clear color and depth */
-    defaultFramebuffer.clear(FramebufferClear::Color | FramebufferClear::Depth);
 
     /* set voxel shader parameters */
     _voxelShader.setProjectionMatrixX(_voxelProjectionMatX)
@@ -222,13 +210,15 @@ void GlobalIlluminationExample::drawEvent() {
     defaultFramebuffer.setViewport({{}, viewportSize});
     _camera->setViewport(viewportSize);
 
-    Renderer::setClearColor(Color4{Color3{0.f}, 1.f});
     Renderer::setColorMask(true, true, true, true);
     Renderer::enable(Renderer::Feature::DepthTest);
     Renderer::enable(Renderer::Feature::FaceCulling);
     // Renderer::enable(Renderer::Feature::Blending);
     // Renderer::setBlendFunction(Renderer::BlendFunction::SourceAlpha, Renderer::BlendFunction::OneMinusSourceAlpha);
+    // Renderer::disable(Renderer::Feature(0x9346));
 
+    /* set clear color to black */
+    Renderer::setClearColor(Color4{Color3{0.f}, 1.f});
     /* clear color and depth */
     defaultFramebuffer.clear(FramebufferClear::Color | FramebufferClear::Depth);
 
@@ -247,7 +237,6 @@ void GlobalIlluminationExample::drawEvent() {
     _debugVoxelsMesh.draw(_voxelVisualShader);
 
     swapBuffers();
-    redraw();
 }
 
 void GlobalIlluminationExample::viewportEvent(const Vector2i& size) {
