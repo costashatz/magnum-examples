@@ -163,7 +163,9 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
 
     Color4 cubeColor = Color4(0.5f, 0.5f, 0.5f, 1.f);
     /* Create cube object for being voxelized */
-    (new VoxelizedObject(cubeMesh, cubeColor, _voxelShader, _o, &_voxels))->rotateY(65.0_degf);
+    (new VoxelizedObject(cubeMesh, cubeColor, _voxelShader, _o, &_voxels))->rotateYLocal(65.0_degf)
+                                                                           .rotateXLocal(35.0_degf)
+                                                                           .rotateZLocal(-55.0_degf);
 
     /* Create sphere */
     Trade::MeshData3D sphere = Primitives::Icosphere::solid(4);
@@ -175,7 +177,9 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
 
     Color4 sphereColor = Color4(0.8f, 0.2f, 0.2f, 1.f);
     /* Create sphere object for being voxelized */
-    (new VoxelizedObject(sphereMesh, sphereColor, _voxelShader, _o, &_voxels))->translate(Vector3{-2.f, 2.f, -1.f}).rotateY(65.0_degf);
+    (new VoxelizedObject(sphereMesh, sphereColor, _voxelShader, _o, &_voxels))->translate(Vector3{-2.f, 2.f, -1.f})
+                                                                               .rotateYLocal(65.0_degf)
+                                                                               .rotateZLocal(55.0_degf);
 
     /* Loop at 60 Hz max */
     setSwapInterval(1);
@@ -206,7 +210,7 @@ void GlobalIlluminationExample::drawEvent() {
     /* clear voxelTexture */
     Containers::Array<Color4ub> tmp{Containers::DirectInit, Math::pow<3>(static_cast<UnsignedInt>(_voxelDimensions)), Color4ub(0, 0)};
     ImageView3D image{PixelFormat::RGBA, PixelType::UnsignedByte, Vector3i{_voxelDimensions}, tmp};
-    _voxelTexture.setSubImage(0, {}, image).generateMipmap();
+    _voxelTexture.setSubImage(0, {}, image);
 
     /* set voxel shader parameters */
     _voxelShader.setVoxelSize(_voxelGridWorldSize / static_cast<Float>(_voxelDimensions))
