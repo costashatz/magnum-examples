@@ -54,6 +54,10 @@ if(WITH_CUBEMAP_EXAMPLE)
     add_subdirectory(cubemap)
 endif()
 
+if(WITH_GLOBALILLUMINATION_EXAMPLE)
+    add_subdirectory(global-illumination)
+endif()
+
 if(WITH_MOTIONBLUR_EXAMPLE)
     add_subdirectory(motionblur)
 endif()

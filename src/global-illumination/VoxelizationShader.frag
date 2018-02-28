@@ -1,0 +1,59 @@
+/* inputs from fragment shader */
+in vec2 texCoords;
+in vec3 normal;
+in flat int dominantAxis;
+
+/* uniforms */
+/* the voxel texture to create the octree */
+uniform layout(binding = 0, RGBA8) image3D voxelTexture;
+/* diffuse texture only */
+#ifdef DIFFUSE_TEXTURE
+uniform layout(binding = 1) sampler2D diffuseTexture;
+#endif
+
+layout(location = 4)
+uniform vec4 diffuseColor = vec4(1.);
+
+layout(location = 5)
+uniform int voxelDimensions;
+
+layout (location = 0) out vec4 gl_FragColor;
+layout (pixel_center_integer) in vec4 gl_FragCoord;
+
+void main() {
+    /* get material color either from texture or color */
+    vec4 materialColor = 
+    #ifdef DIFFUSE_TEXTURE
+        texture(diffuseTexture, texCoords) *
+    #endif
+        diffuseColor;
+
+    /* @todo: maybe also include direct diffuse lighting things? */
+
+    /* @todo: create shadow map? */
+    /* @todo: add transparency feature? */
+    float visibility = 1.;
+
+	ivec3 camPos = ivec3(gl_FragCoord.x, gl_FragCoord.y, voxelDimensions * gl_FragCoord.z);
+	ivec3 texPos;
+	if(dominantAxis == 1) {
+	    texPos.x = voxelDimensions - camPos.z;
+		texPos.z = camPos.x;
+		texPos.y = camPos.y;
+	}
+	else if(dominantAxis == 2) {
+	    texPos.z = camPos.y;
+		texPos.y = voxelDimensions - camPos.z;
+		texPos.x = camPos.x;
+	} else {
+	    texPos = camPos;
+	}
+
+	/* flipt z coordinate */
+	texPos.z = voxelDimensions - texPos.z - 1;
+
+	/* Overwrite currently stored value.
+     * @todo: Atomic operations to get an averaged value, described in OpenGL insights about voxelization
+              Required to avoid flickering when voxelizing every frame */
+    imageStore(voxelTexture, texPos, vec4(materialColor.rgb * visibility, 1.));
+}
