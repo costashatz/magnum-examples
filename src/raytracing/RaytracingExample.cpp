@@ -138,7 +138,7 @@ class RaytracingExample: public Platform::Application {
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
         Vector3 positionOnSphere(const Vector2i& _position) const;
-        void refreshTexture(const Vector2i& size);
+        void refreshTexture(const Vector2i& size, bool first = false);
         void refreshCamera();
 
         Scene3D _scene;
@@ -150,7 +150,7 @@ class RaytracingExample: public Platform::Application {
 
         RenderTextureShader _renderShader;
         RaytracingShader _rayShader;
-        UnsignedInt _width, _height;
+        Int _width, _height;
         UnsignedInt _workgroupSize = 20;
         Buffer _objectsBuffer;
         Buffer _materialsBuffer;
@@ -192,7 +192,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     _rayShader = RaytracingShader{};
 
     /* initialize and bind output image */
-    refreshTexture(defaultFramebuffer.viewport().size());
+    refreshTexture(defaultFramebuffer.viewport().size(), true);
 
     /* initialize and setup camera in shader */
     /* camera located at (2,3,10) looking in the center */
@@ -215,7 +215,7 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     mats.emplace_back(material);
 
     material.diffuse = Color4(0.f, 0.3f, 0.8f, 1.f);
-    material.specular = Color4(1.f);
+    material.specular = Color4(0.f);
     material.emission = Color4(0.f, 0.f, 0.f, 1.f);
     material.shininess = 80.f;
     mats.emplace_back(material);
@@ -247,9 +247,9 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     std::vector<Light> lights;
     lights.emplace_back(light);
 
-    light.position = Vector4(0.6f, 0.6f, 0.6f, 0.f).normalized(); // w = 0.f means directional
-    light.intensity = 0.5f;
-    lights.emplace_back(light);
+    // light.position = Vector4(0.6f, 0.6f, 0.6f, 0.f).normalized(); // w = 0.f means directional
+    // light.intensity = 0.5f;
+    // lights.emplace_back(light);
 
     /* bind lights buffer */
     _lightsBuffer.bind(Buffer::Target::ShaderStorage, _rayShader.lightBufferBindLocation());
@@ -421,6 +421,60 @@ RaytracingExample::RaytracingExample(const Arguments& arguments):
     startIndex = triangle_objects.size();
     meshes.push_back(mSphere);
 
+    minX = Constants::inf();
+    minY = Constants::inf();
+    minZ = Constants::inf();
+    maxX = -Constants::inf();
+    maxY = -Constants::inf();
+    maxZ = -Constants::inf();
+    cube = Primitives::Cube::solid();
+    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{20.f, 20.f, 0.1f}*0.5f), cube.positions(0));
+    // MeshTools::transformPointsInPlace(Matrix4::translation(Vector3{0.f, -1.05f, 0.f}), cube.positions(0));
+    /* add ground */
+    for(UnsignedInt i = 0; i < cube.indices().size(); i += 3) {
+        Object obj;
+        obj.triangle.A.xyz() = cube.positions(0)[cube.indices()[i]];
+        obj.triangle.B.xyz() = cube.positions(0)[cube.indices()[i + 1]];
+        obj.triangle.C.xyz() = cube.positions(0)[cube.indices()[i + 2]];
+
+        obj.triangle.normal.xyz() = (cross((obj.triangle.B - obj.triangle.A).xyz(), (obj.triangle.C - obj.triangle.A).xyz())).normalized();
+
+        obj.meshId = 3;
+        obj.materialIndex = 1;
+
+        triangle_objects.emplace_back(obj);
+
+        /* bounding box computation */
+        for(UnsignedInt j = 0; j < 3; j++) {
+            Vector3 vec =  cube.positions(0)[cube.indices()[i + j]];
+            if(vec.x() < minX)
+                minX = vec.x();
+            if(vec.x() > maxX)
+                maxX = vec.x();
+            if(vec.y() < minY)
+                minY = vec.y();
+            if(vec.y() > maxY)
+                maxY = vec.y();
+            if(vec.z() < minZ)
+                minZ = vec.z();
+            if(vec.z() > maxZ)
+                maxZ = vec.z();
+        }
+    }
+    auto wallObj = new RayObject{_meshesBuffer, 3 * sizeof(RayMesh), _o, &_drawables};
+    wallObj->translate({0.f, 5.f, -5.f});
+    /* add triangles to octree */
+    for(UnsignedInt i = startIndex; i < triangle_objects.size(); i++) {
+        octreeRoot.insertObject(new OctreeObject(wallObj, triangle_objects[i], i));
+    }
+    RayMesh mWall;
+    mWall.minPoint = Vector4(minX, minY, minZ, 1.f);
+    mWall.maxPoint = Vector4(maxX, maxY, maxZ, 1.f);
+    mWall.objectStart = startIndex;
+    mWall.objectSize = triangle_objects.size() - startIndex;
+    startIndex = triangle_objects.size();
+    meshes.push_back(mWall);
+
     Debug{} << "Let's create the octree";
     octreeRoot.update();
     Debug{} << "Created";
@@ -550,15 +604,15 @@ void RaytracingExample::drawEvent() {
     mesh.setCount(3)
         .draw(_renderShader);
     swapBuffers();
-    // redraw();
+    redraw();
     _timeline.nextFrame();
 }
 
 void RaytracingExample::viewportEvent(const Vector2i& size) {
     defaultFramebuffer.setViewport({{}, size});
     _camera->setViewport(size);
-    _rayShader.setViewport(size[0], size[1]);
-    refreshTexture(size);
+    // _rayShader.setViewport(size[0], size[1]);
+    // refreshTexture(size);
 }
 
 void RaytracingExample::mousePressEvent(MouseEvent& event) {
@@ -609,15 +663,16 @@ void RaytracingExample::mouseMoveEvent(MouseMoveEvent& event) {
     redraw();
 }
 
-void RaytracingExample::refreshTexture(const Vector2i& size) {
-    _width = size[0];
-    _height = size[1];
-
-    Image2D image{PixelFormat::RGBA, PixelType::Float, size, Containers::Array<char>(size[0]*size[1]*16)};
-    _outputImage.setWrapping(Sampler::Wrapping::ClampToEdge)
-                .setMinificationFilter(Sampler::Filter::Nearest)
-                .setMagnificationFilter(Sampler::Filter::Nearest)
-                .setImage(0, TextureFormat::RGBA, image);
+void RaytracingExample::refreshTexture(const Vector2i& size, bool first) {
+    if(first || size[0] != _width || size[1] != _height) {
+        _width = size[0];
+        _height = size[1];
+        Image2D image{PixelFormat::RGBA, PixelType::Float, {_width, _height}, Containers::Array<char>(_width*_height*16)};
+        _outputImage.setWrapping(Sampler::Wrapping::ClampToEdge)
+                    .setMinificationFilter(Sampler::Filter::Linear)
+                    .setMagnificationFilter(Sampler::Filter::Linear)
+                    .setImage(0, TextureFormat::RGBA, image);
+    }
 
     _rayShader.setOutputTexture(_outputImage);
     _rayShader.setViewport(_width, _height);
