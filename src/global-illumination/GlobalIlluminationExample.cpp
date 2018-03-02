@@ -195,9 +195,9 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     cubeMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
 
     auto cubeObject = new Object3D{_o};
-    cubeObject->rotateYLocal(65.0_degf)
-               .rotateXLocal(35.0_degf)
-               .rotateZLocal(-55.0_degf);
+    // cubeObject->rotateYLocal(65.0_degf)
+    //            .rotateXLocal(35.0_degf)
+    //            .rotateZLocal(-55.0_degf);
 
     /* Create cube object for being voxelized */
     auto voxelCube = new VoxelizedObject(cubeMesh, cubeMaterial.diffuseColor(), _voxelShader, cubeObject, &_voxels);
@@ -220,12 +220,36 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     floorMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
 
     auto floorObject = new Object3D{_o};
-    floorObject->translate(Vector3{0.f, -2.f, 0.f});
+    floorObject->translate(Vector3{0.f, -1.2f, 0.f});
 
     /* Create floor object for being voxelized */
     auto voxelFloor = new VoxelizedObject(floorMesh, floorMaterial.diffuseColor(), _voxelShader, floorObject, &_voxels);
     /* Create floor object for visualization */
     new GlobalIlluminationObject(voxelFloor->mesh(), floorMaterial, _voxelConeShader, floorObject, &_illuminationObjects);
+
+    // /* Create wall */
+    // Trade::MeshData3D wall1 = Primitives::Cube::solid();
+    // MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{10.f, 10.f, 0.1f}), wall1.positions(0));
+    // std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(floor, BufferUsage::StaticDraw);
+    // BufferMesh wall1Mesh;
+    // wall1Mesh.mesh = std::unique_ptr<Mesh>(new Mesh{std::move(mesh)});
+    // wall1Mesh.vertexBuffer = std::move(vertexBuffer);
+    // wall1Mesh.indexBuffer = std::move(indexBuffer);
+
+    // MaterialData wall1Material{{}, 80.f};
+    // wall1Material.ambientColor() = Color4(0.f, 0.f, 0.f, 1.f);
+    // wall1Material.diffuseColor() = Color4(0.f, 0.2f, 0.9f, 1.f);
+    // wall1Material.specularColor() = Color4(1.f);
+    // wall1Material.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
+
+    // auto wall1Object = new Object3D{_o};
+    // wall1Object->rotateX(90.0_degf)
+    //             .translate(Vector3{0.f, 0.f, -5.f});
+
+    // /* Create wall object for being voxelized */
+    // auto voxelWall1 = new VoxelizedObject(wall1Mesh, wall1Material.diffuseColor(), _voxelShader, wall1Object, &_voxels);
+    // /* Create floor object for visualization */
+    // new GlobalIlluminationObject(voxelWall1->mesh(), wall1Material, _voxelConeShader, wall1Object, &_illuminationObjects);
 
     /* Create sphere */
     Trade::MeshData3D sphere = Primitives::Icosphere::solid(4);
@@ -242,7 +266,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     sphereMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
 
     auto sphereObject = new Object3D{_o};
-    sphereObject->translate(Vector3{0.f, 2.5f, 0.f});
+    sphereObject->translate(Vector3{0.f, 2.1f, 0.f});
     // sphereObject->translate(Vector3{-2.f, 2.f, -1.f})
     //              .rotateYLocal(65.0_degf)
     //              .rotateZLocal(55.0_degf);
@@ -314,24 +338,24 @@ void GlobalIlluminationExample::drawEvent() {
     /* clear color and depth */
     defaultFramebuffer.clear(FramebufferClear::Color | FramebufferClear::Depth);
 
-    // /* @todo: draw nice scenes */
-    // _voxelConeShader.setVoxelWorldProperties(_voxelGridWorldSize, _voxelDimensions)
-    //                 .setCameraPosition(_cameraObject->transformationMatrix().translation())
-    //                 .setVoxelTexture(_voxelTexture)
-    //                 .setLight(*_light);
-    // _camera->draw(_illuminationObjects);
+    /* @todo: draw nice scenes */
+    _voxelConeShader.setVoxelWorldProperties(_voxelGridWorldSize, _voxelDimensions)
+                    .setCameraPosition(_cameraObject->transformationMatrix().translation())
+                    .setVoxelTexture(_voxelTexture)
+                    .setLight(*_light);
+    _camera->draw(_illuminationObjects);
 
-    /* debug draw */
-    /* do not use it with more than 256x256x256 grids! */
-    /* set voxel visualization parameters */
-    Matrix4 modelMatrix = Matrix4::scaling(Vector3{_voxelGridWorldSize / static_cast<Float>(_voxelDimensions)});
-	Matrix4 viewMatrix = _camera->cameraMatrix();
-	Matrix4 transformationMatrix = _camera->projectionMatrix() * viewMatrix * modelMatrix;
+    // /* debug draw */
+    // /* do not use it with more than 256x256x256 grids! */
+    // /* set voxel visualization parameters */
+    // Matrix4 modelMatrix = Matrix4::scaling(Vector3{_voxelGridWorldSize / static_cast<Float>(_voxelDimensions)});
+	// Matrix4 viewMatrix = _camera->cameraMatrix();
+	// Matrix4 transformationMatrix = _camera->projectionMatrix() * viewMatrix * modelMatrix;
 
-    _voxelVisualShader.setVoxelDimensions(_voxelDimensions)
-                      .setTransformationMatrix(transformationMatrix)
-                      .setVoxelTexture(_voxelTexture);
-    _debugVoxelsMesh.draw(_voxelVisualShader);
+    // _voxelVisualShader.setVoxelDimensions(_voxelDimensions)
+    //                   .setTransformationMatrix(transformationMatrix)
+    //                   .setVoxelTexture(_voxelTexture);
+    // _debugVoxelsMesh.draw(_voxelVisualShader);
 
     swapBuffers();
 }

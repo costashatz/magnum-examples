@@ -73,31 +73,8 @@ uniform Light light;
 out vec4 color;
 
 /* global variables/defines */
-const float maximumDistance = 100.0;
+const float maximumDistance = distance(vec3(abs(worldPosition)), vec3(-voxelGridWorldSize / 2.));;
 const float alphaThreshold = 0.95;
-
-// 6 60 degree cone
-const int numberOfCones = 6;
-vec3 coneDirections[6] = vec3[]
-(                            vec3(0, 1, 0),
-                            vec3(0, 0.5, 0.866025),
-                            vec3(0.823639, 0.5, 0.267617),
-                            vec3(0.509037, 0.5, -0.700629),
-                            vec3(-0.509037, 0.5, -0.700629),
-                            vec3(-0.823639, 0.5, 0.267617)
-                            );
-float coneWeights[6] = float[](0.25, 0.15, 0.15, 0.15, 0.15, 0.15);
-
-// // 5 90 degree cones
-// const int numberOfCones = 5;
-// vec3 coneDirections[5] = vec3[]
-// (                            vec3(0, 1, 0),
-//                             vec3(0, 0.707, 0.707),
-//                             vec3(0, 0.707, -0.707),
-//                             vec3(0.707, 0.707, 0),
-//                             vec3(-0.707, 0.707, 0)
-//                             );
-// float coneWeights[5] = float[](0.28, 0.18, 0.18, 0.18, 0.18);
 
 /* helper function to get a vector orthogonal to another*/
 /* assumes v is already normalized */
@@ -116,20 +93,17 @@ vec4 getVoxel(vec3 position, float lod) {
 
 
 /* trace cone in voxel grid */
-vec4 coneTrace(vec3 pos, vec3 direction, float tanHalfAngle, float maxDistance, out float occlusion) {
-    
+vec4 coneTrace(vec3 pos, vec3 direction, float tanHalfAngle, float maxDistance) {
     /* lod level 0 mipmap is full size,
      * level 1 is half that size and so on
      */
     float lod = 0.;
     vec3 color = vec3(0.);
     float alpha = 0.;
-    occlusion = 0.;
 
     float voxelWorldSize = voxelGridWorldSize / voxelDimensions;
     float dist = voxelWorldSize; /* Start one voxel away to avoid self occlusion */
-    vec3 startPos = pos + worldNormal * voxelWorldSize; /* Plus move away slightly in the normal direction to avoid
-                                                                    self occlusion in flat surfaces */
+    vec3 startPos = pos;
 
     while(dist < maxDistance && alpha < alphaThreshold) {
         /* smallest sample diameter possible is the voxel size */
@@ -141,7 +115,6 @@ vec4 coneTrace(vec3 pos, vec3 direction, float tanHalfAngle, float maxDistance, 
         float a = (1. - alpha);
         color += a * voxelColor.rgb;
         alpha += a * voxelColor.a;
-        occlusion += (a * voxelColor.a) / (1.0 + 0.03 * diameter);
         dist += diameter * 0.5; /* smoother */
         /* dist += diameter; /* faster but misses more voxels */
     }
@@ -150,84 +123,57 @@ vec4 coneTrace(vec3 pos, vec3 direction, float tanHalfAngle, float maxDistance, 
 }
 
 /* trace indirect diffuse light */
-vec4 indirectDiffuseLight(out float occlusion_out) {
+vec4 indirectDiffuseLight() {
     vec4 color = vec4(0.);
-    occlusion_out = 0.;
 
-    for(int i = 0; i < numberOfCones; i++) {
-        float occlusion = 0.;
-        /* 60 degree cones -> tan(30) = 0.577
-           90 degree cones -> tan(45) = 1.0 */
-        color += coneWeights[i] * coneTrace(worldPosition, normalize(normalMatrix * coneDirections[i]), 0.577, maximumDistance, occlusion);
-        occlusion_out += coneWeights[i] * occlusion;
-    }
+    /* Angle mix (1.0f => orthogonal direction, 0.0f => direction of normal) */
+    const float angleMix = 0.5f;
 
-    // const float ANGLE_MIX = 0.5f; // Angle mix (1.0f => orthogonal direction, 0.0f => direction of normal).
+    /* Cone weights. */
+    // const float w[3] = {0.25, 0.25, 0.25};
+    const float w[3] = {0.25, 0.25, 0.25};
 
-	// const float w[3] = {1.0, 1.0, 1.0}; // Cone weights.
+    /* Starting position
+     * We offset forward in normal direction, and backward in cone direction.
+     * Backward in cone direction improves GI, and forward direction removes
+     * artifacts
+     */
+    float voxelWorldSize = voxelGridWorldSize / voxelDimensions;
+    vec3 origin = worldPosition + worldNormal * (1. + 0.75 * 0.707106) * voxelWorldSize;
+    float coneOffset = -0.001;
 
-    // float voxelWorldSize = voxelGridWorldSize / voxelDimensions;
-    // vec3 origin = worldPosition + worldNormal * voxelWorldSize;
-    // float coneOffset = -0.001;
+	/* Find a base for the side cones with the normal as one of its base vectors */
+	const vec3 ortho = normalize(orthogonal(worldNormal));
+	const vec3 ortho2 = normalize(cross(ortho, worldNormal));
 
-	// // Find a base for the side cones with the normal as one of its base vectors.
-	// const vec3 ortho = normalize(orthogonal(worldNormal));
-	// const vec3 ortho2 = normalize(cross(ortho, worldNormal));
+	/* Find base vectors for the corner cones too */
+	const vec3 corner = 0.5f * (ortho + ortho2);
+	const vec3 corner2 = 0.5f * (ortho - ortho2);
 
-	// // Find base vectors for the corner cones too.
-	// const vec3 corner = 0.5f * (ortho + ortho2);
-	// const vec3 corner2 = 0.5f * (ortho - ortho2);
+	/* Trace front cone */
+	color += w[0] * coneTrace(origin + coneOffset * worldNormal, worldNormal, 0.325, maximumDistance);
 
-	// // Trace front cone
-    // float occlusion = 0.;
-	// color += w[0] * coneTrace(origin + coneOffset * worldNormal, worldNormal, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[0] * occlusion;
+	/* Trace 4 side cones */
+	const vec3 s1 = mix(worldNormal, ortho, angleMix);
+	const vec3 s2 = mix(worldNormal, -ortho, angleMix);
+	const vec3 s3 = mix(worldNormal, ortho2, angleMix);
+	const vec3 s4 = mix(worldNormal, -ortho2, angleMix);
 
-	// // Trace 4 side cones.
-	// const vec3 s1 = mix(worldNormal, ortho, ANGLE_MIX);
-	// const vec3 s2 = mix(worldNormal, -ortho, ANGLE_MIX);
-	// const vec3 s3 = mix(worldNormal, ortho2, ANGLE_MIX);
-	// const vec3 s4 = mix(worldNormal, -ortho2, ANGLE_MIX);
+    color += w[1] * coneTrace(origin + coneOffset * ortho, s1, 0.325, maximumDistance);
+    color += w[1] * coneTrace(origin - coneOffset * ortho, s2, 0.325, maximumDistance);
+    color += w[1] * coneTrace(origin + coneOffset * ortho2, s3, 0.325, maximumDistance);
+	color += w[1] * coneTrace(origin - coneOffset * ortho2, s4, 0.325, maximumDistance);
 
-    // occlusion = 0.;
-    // color += w[1] * coneTrace(origin + coneOffset * ortho, s1, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[1] * occlusion;
+	/* Trace 4 corner cones */
+	const vec3 c1 = mix(worldNormal, corner, angleMix);
+	const vec3 c2 = mix(worldNormal, -corner, angleMix);
+	const vec3 c3 = mix(worldNormal, corner2, angleMix);
+	const vec3 c4 = mix(worldNormal, -corner2, angleMix);
 
-    // occlusion = 0.;
-    // color += w[1] * coneTrace(origin - coneOffset * ortho, s2, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[1] * occlusion;
-
-    // occlusion = 0.;
-    // color += w[1] * coneTrace(origin + coneOffset * ortho2, s3, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[1] * occlusion;
-
-    // occlusion = 0.;
-	// color += w[1] * coneTrace(origin - coneOffset * ortho2, s4, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[1] * occlusion;
-
-	// // Trace 4 corner cones.
-	// const vec3 c1 = mix(worldNormal, corner, ANGLE_MIX);
-	// const vec3 c2 = mix(worldNormal, -corner, ANGLE_MIX);
-	// const vec3 c3 = mix(worldNormal, corner2, ANGLE_MIX);
-	// const vec3 c4 = mix(worldNormal, -corner2, ANGLE_MIX);
-
-	// occlusion = 0.;
-    // color += w[2] * coneTrace(origin + coneOffset * corner, c1, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[2] * occlusion;
-
-    // occlusion = 0.;
-    // color += w[2] * coneTrace(origin - coneOffset * corner, c2, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[2] * occlusion;
-
-    // occlusion = 0.;
-    // color += w[2] * coneTrace(origin + coneOffset * corner2, c3, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[2] * occlusion;
-
-    // occlusion = 0.;
-	// color += w[2] * coneTrace(origin - coneOffset * corner2, c4, 0.577, maximumDistance, occlusion);
-    // occlusion_out += w[2] * occlusion;
-
-    occlusion_out = 1. - occlusion_out;
+    color += w[2] * coneTrace(origin + coneOffset * corner, c1, 0.325, maximumDistance);
+    color += w[2] * coneTrace(origin - coneOffset * corner, c2, 0.325, maximumDistance);
+    color += w[2] * coneTrace(origin + coneOffset * corner2, c3, 0.325, maximumDistance);
+	color += w[2] * coneTrace(origin - coneOffset * corner2, c4, 0.325, maximumDistance);
 
     return color;
 }
@@ -317,13 +263,13 @@ void main() {
     vec4 directLighting = directLight(light, visibility, finalDiffuseColor, finalSpecularColor, normalizedEyeDir);
 
     /* @todo: compute indirect diffuse */
-    float occlusion;
-    vec4 diffuseIndirect = indirectDiffuseLight(occlusion) * finalDiffuseColor;
-    // occlusion = min(1.0, 1.5 * occlusion);
-    // diffuseIndirect = 2. * occlusion * diffuseIndirect * finalDiffuseColor;
+    vec4 diffuseIndirect = indirectDiffuseLight() * finalDiffuseColor;
 
     /* @todo: compute specular 2nd bounce */
-    vec4 specularBounce = vec4(0., 0., 0., 1.);
+    float voxelWorldSize = voxelGridWorldSize / voxelDimensions;
+    vec3 reflection = normalize(reflect(normalizedEyeDir, worldNormal));
+    vec3 origin = worldPosition + worldNormal * (1. + 3. * 0.707106) * voxelWorldSize;
+    vec4 specularBounce = 0.5 * coneTrace(origin, reflection, 0.577, maximumDistance);
 
     /* @todo: compute indirect refractive if transparent object */
     vec4 refractiveIndirect = vec4(0., 0., 0., 1.);
