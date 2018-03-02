@@ -1,5 +1,7 @@
-/* inputs from fragment shader */
+/* inputs from geometry shader */
+#ifdef DIFFUSE_TEXTURE
 in vec2 texCoords;
+#endif
 in vec3 normal;
 in flat int dominantAxis;
 in flat int voxelDims;

@@ -34,17 +34,17 @@ namespace Magnum { namespace Examples {
 
 MaterialData::MaterialData(MaterialData&& other) noexcept: _flags{other._flags}, _shininess{other._shininess}, _emissive(other._emissive) {
     if(_flags & Flag::AmbientTexture)
-        _ambient.texture = other._ambient.texture;
+        _ambient.texture = std::move(other._ambient.texture);
     else
         _ambient.color = other._ambient.color;
 
     if(_flags & Flag::DiffuseTexture)
-        _diffuse.texture = other._diffuse.texture;
+        _diffuse.texture = std::move(other._diffuse.texture);
     else
         _diffuse.color = other._diffuse.color;
 
     if(_flags & Flag::SpecularTexture)
-        _specular.texture = other._specular.texture;
+        _specular.texture = std::move(other._specular.texture);
     else
         _specular.color = other._specular.color;
 }
@@ -55,17 +55,17 @@ MaterialData& MaterialData::operator=(MaterialData&& other) noexcept {
     _emissive = other._emissive;
 
     if(_flags & Flag::AmbientTexture)
-        _ambient.texture = other._ambient.texture;
+        _ambient.texture = std::move(other._ambient.texture);
     else
         _ambient.color = other._ambient.color;
 
     if(_flags & Flag::DiffuseTexture)
-        _diffuse.texture = other._diffuse.texture;
+        _diffuse.texture = std::move(other._diffuse.texture);
     else
         _diffuse.color = other._diffuse.color;
 
     if(_flags & Flag::SpecularTexture)
-        _specular.texture = other._specular.texture;
+        _specular.texture = std::move(other._specular.texture);
     else
         _specular.color = other._specular.color;
 
@@ -77,7 +77,7 @@ Color4& MaterialData::ambientColor() {
     return _ambient.color;
 }
 
-UnsignedInt& MaterialData::ambientTexture() {
+Texture2D& MaterialData::ambientTexture() {
     CORRADE_ASSERT(_flags & Flag::AmbientTexture, "MaterialData::ambientTexture(): the material doesn't have ambient texture", _ambient.texture);
     return _ambient.texture;
 }
@@ -87,7 +87,7 @@ Color4& MaterialData::diffuseColor() {
     return _diffuse.color;
 }
 
-UnsignedInt& MaterialData::diffuseTexture() {
+Texture2D& MaterialData::diffuseTexture() {
     CORRADE_ASSERT(_flags & Flag::DiffuseTexture, "MaterialData::diffuseTexture(): the material doesn't have diffuse texture", _diffuse.texture);
     return _diffuse.texture;
 }
@@ -97,7 +97,7 @@ Color4& MaterialData::specularColor() {
     return _specular.color;
 }
 
-UnsignedInt& MaterialData::specularTexture() {
+Texture2D& MaterialData::specularTexture() {
     CORRADE_ASSERT(_flags & Flag::SpecularTexture, "MaterialData::specularTexture(): the material doesn't have specular texture", _specular.texture);
     return _specular.texture;
 }

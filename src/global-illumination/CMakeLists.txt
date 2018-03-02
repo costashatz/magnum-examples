@@ -71,6 +71,8 @@ add_executable(magnum-global-illumination
     VoxelizationShader.cpp
     VoxelVisualizationShader.h
     VoxelVisualizationShader.cpp
+    VoxelConeTracingShader.h
+    VoxelConeTracingShader.cpp
     ${Shaders_RESOURCES})
 target_link_libraries(magnum-global-illumination
     Magnum::Application

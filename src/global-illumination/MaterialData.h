@@ -31,18 +31,13 @@
 */
 
 #include <Magnum/Magnum.h>
+#include <Magnum/Texture.h>
 #include <Magnum/Math/Color.h>
 
 namespace Magnum { namespace Examples {
 
 class MaterialData {
     public:
-        enum: UnsignedInt {
-            AmbientTextureID = 0,   /**< Ambient texture ID for mapping with texture coordinates */
-            DiffuseTextureID = 1,   /**< Diffuse texture ID for mapping with texture coordinates */
-            SpecularTextureID = 3   /**< Specular texture ID for mapping with texture coordinates */
-        };
-
         /**
          * @brief Material flag
          *
@@ -96,13 +91,13 @@ class MaterialData {
         Color4 ambientColor() const; /**< @overload */
 
         /**
-         * @brief Ambient texture ID
+         * @brief Ambient texture
          *
          * Available only if the material has @ref Flag::AmbientTexture.
          * @see @ref flags(), @ref AbstractImporter::texture()
          */
-        UnsignedInt& ambientTexture();
-        UnsignedInt ambientTexture() const; /**< @overload */
+        Texture2D& ambientTexture();
+        const Texture2D& ambientTexture() const; /**< @overload */
 
         /**
          * @brief Diffuse color
@@ -114,13 +109,13 @@ class MaterialData {
         Color4 diffuseColor() const; /**< @overload */
 
         /**
-         * @brief Diffuse texture ID
+         * @brief Diffuse texture
          *
          * Available only if the material has @ref Flag::DiffuseTexture.
          * @see @ref flags(), @ref AbstractImporter::texture()
          */
-        UnsignedInt& diffuseTexture();
-        UnsignedInt diffuseTexture() const; /**< @overload */
+        Texture2D& diffuseTexture();
+        const Texture2D& diffuseTexture() const; /**< @overload */
 
         /**
          * @brief Specular color
@@ -132,13 +127,13 @@ class MaterialData {
         Color4 specularColor() const; /**< @overload */
 
         /**
-         * @brief Specular texture ID
+         * @brief Specular texture
          *
          * Available only if the material has @ref Flag::SpecularTexture.
          * @see @ref flags(), @ref AbstractImporter::texture()
          */
-        UnsignedInt& specularTexture();
-        UnsignedInt specularTexture() const; /**< @overload */
+        Texture2D& specularTexture();
+        const Texture2D& specularTexture() const; /**< @overload */
 
         /** @brief Shininess */
         Float shininess() const { return _shininess; }
@@ -152,9 +147,10 @@ class MaterialData {
     private:
         union Source {
             Source() {}
+            ~Source() {}
 
             Color4 color;
-            UnsignedInt texture;
+            Texture2D texture;
         };
 
         Flags _flags;
@@ -171,7 +167,7 @@ inline Color4 MaterialData::ambientColor() const {
     return const_cast<MaterialData*>(this)->ambientColor();
 }
 
-inline UnsignedInt MaterialData::ambientTexture() const {
+inline const Texture2D& MaterialData::ambientTexture() const {
     return const_cast<MaterialData*>(this)->ambientTexture();
 }
 
@@ -179,7 +175,7 @@ inline Color4 MaterialData::diffuseColor() const {
     return const_cast<MaterialData*>(this)->diffuseColor();
 }
 
-inline UnsignedInt MaterialData::diffuseTexture() const {
+inline const Texture2D& MaterialData::diffuseTexture() const {
     return const_cast<MaterialData*>(this)->diffuseTexture();
 }
 
@@ -187,7 +183,7 @@ inline Color4 MaterialData::specularColor() const {
     return const_cast<MaterialData*>(this)->specularColor();
 }
 
-inline UnsignedInt MaterialData::specularTexture() const {
+inline const Texture2D& MaterialData::specularTexture() const {
     return const_cast<MaterialData*>(this)->specularTexture();
 }
 

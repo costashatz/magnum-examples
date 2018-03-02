@@ -38,6 +38,7 @@
 #include <Magnum/TextureFormat.h>
 #include <Magnum/Math/Matrix4.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Primitives/Cube.h>
 #include <Magnum/Primitives/Icosphere.h>
@@ -49,6 +50,7 @@
 
 #include "VoxelizationShader.h"
 #include "VoxelVisualizationShader.h"
+#include "VoxelConeTracingShader.h"
 
 namespace Magnum { namespace Examples {
 
@@ -76,9 +78,9 @@ class GlobalIlluminationExample: public Platform::Application {
         Scene3D _scene;
         Object3D *_o, *_cameraObject;
         SceneGraph::Camera3D* _camera;
-        SceneGraph::DrawableGroup3D _voxels;
 
         /* voxelization */
+        SceneGraph::DrawableGroup3D _voxels;
         VoxelizationShader _voxelShader;
         VoxelVisualizationShader _voxelVisualShader;
         Texture3D _voxelTexture;
@@ -87,6 +89,11 @@ class GlobalIlluminationExample: public Platform::Application {
         Matrix4 _voxelProjectionMatX, _voxelProjectionMatY, _voxelProjectionMatZ;
         Mesh _debugVoxelsMesh;
         Buffer _dummy;
+
+        /* global illumination */
+        SceneGraph::DrawableGroup3D _illuminationObjects;
+        VoxelConeTracingShader _voxelConeShader;
+        std::unique_ptr<LightData> _light;
 };
 
 struct BufferMesh {
@@ -99,6 +106,8 @@ class VoxelizedObject: public Object3D, SceneGraph::Drawable3D {
     public:
         explicit VoxelizedObject(BufferMesh& mesh, const Color4& color, VoxelizationShader& voxelShader, Object3D* parent, SceneGraph::DrawableGroup3D* group) : Object3D{parent}, SceneGraph::Drawable3D{*this, group}, _mesh(std::move(mesh)), _color(color), _voxelShader(&voxelShader) {}
 
+        BufferMesh& mesh() { return _mesh; }
+
     private:
         void draw(const Matrix4& /* transformationMatrix */, SceneGraph::Camera3D& /* camera */) override {
             _voxelShader->setTransformationMatrix(absoluteTransformation())
@@ -109,6 +118,24 @@ class VoxelizedObject: public Object3D, SceneGraph::Drawable3D {
         BufferMesh _mesh;
         Color4 _color;
         VoxelizationShader* _voxelShader;
+};
+
+class GlobalIlluminationObject: public Object3D, SceneGraph::Drawable3D {
+    public:
+        explicit GlobalIlluminationObject(BufferMesh& mesh, MaterialData& material, VoxelConeTracingShader& voxelConeShader, Object3D* parent, SceneGraph::DrawableGroup3D* group) : Object3D{parent}, SceneGraph::Drawable3D{*this, group}, _mesh(mesh), _material(std::move(material)), _voxelConeShader(&voxelConeShader) {}
+
+    private:
+        void draw(const Matrix4&  transformationMatrix, SceneGraph::Camera3D& camera) override {
+            _voxelConeShader->setTransformationMatrix(camera.projectionMatrix() * transformationMatrix)
+                             .setModelMatrix(absoluteTransformation())
+                            //  .setCameraPosition(camera.object().transformationMatrix().translation())
+                             .setMaterial(_material);
+            _mesh.mesh->draw(*_voxelConeShader);
+        }
+
+        BufferMesh& _mesh;
+        MaterialData _material;
+        VoxelConeTracingShader* _voxelConeShader;
 };
 
 GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments):
@@ -161,11 +188,44 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     cubeMesh.vertexBuffer = std::move(vertexBuffer);
     cubeMesh.indexBuffer = std::move(indexBuffer);
 
-    Color4 cubeColor = Color4(0.5f, 0.5f, 0.5f, 1.f);
+    MaterialData cubeMaterial{{}, 80.f};
+    cubeMaterial.ambientColor() = Color4(0.f, 0.f, 0.f, 1.f);
+    cubeMaterial.diffuseColor() = Color4(0.5f, 0.5f, 0.5f, 1.f);
+    cubeMaterial.specularColor() = Color4(1.f);
+    cubeMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
+
+    auto cubeObject = new Object3D{_o};
+    cubeObject->rotateYLocal(65.0_degf)
+               .rotateXLocal(35.0_degf)
+               .rotateZLocal(-55.0_degf);
+
     /* Create cube object for being voxelized */
-    (new VoxelizedObject(cubeMesh, cubeColor, _voxelShader, _o, &_voxels))->rotateYLocal(65.0_degf)
-                                                                           .rotateXLocal(35.0_degf)
-                                                                           .rotateZLocal(-55.0_degf);
+    auto voxelCube = new VoxelizedObject(cubeMesh, cubeMaterial.diffuseColor(), _voxelShader, cubeObject, &_voxels);
+    /* Create cube object for visualization */
+    new GlobalIlluminationObject(voxelCube->mesh(), cubeMaterial, _voxelConeShader, cubeObject, &_illuminationObjects);
+
+    /* Create floor */
+    Trade::MeshData3D floor = Primitives::Cube::solid();
+    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{10.f, 0.1f, 10.f}), floor.positions(0));
+    std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(floor, BufferUsage::StaticDraw);
+    BufferMesh floorMesh;
+    floorMesh.mesh = std::unique_ptr<Mesh>(new Mesh{std::move(mesh)});
+    floorMesh.vertexBuffer = std::move(vertexBuffer);
+    floorMesh.indexBuffer = std::move(indexBuffer);
+
+    MaterialData floorMaterial{{}, 80.f};
+    floorMaterial.ambientColor() = Color4(0.f, 0.f, 0.f, 1.f);
+    floorMaterial.diffuseColor() = Color4(0.f, 0.2f, 0.9f, 1.f);
+    floorMaterial.specularColor() = Color4(1.f);
+    floorMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
+
+    auto floorObject = new Object3D{_o};
+    floorObject->translate(Vector3{0.f, -2.f, 0.f});
+
+    /* Create floor object for being voxelized */
+    auto voxelFloor = new VoxelizedObject(floorMesh, floorMaterial.diffuseColor(), _voxelShader, floorObject, &_voxels);
+    /* Create floor object for visualization */
+    new GlobalIlluminationObject(voxelFloor->mesh(), floorMaterial, _voxelConeShader, floorObject, &_illuminationObjects);
 
     /* Create sphere */
     Trade::MeshData3D sphere = Primitives::Icosphere::solid(4);
@@ -175,11 +235,26 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     sphereMesh.vertexBuffer = std::move(vertexBuffer);
     sphereMesh.indexBuffer = std::move(indexBuffer);
 
-    Color4 sphereColor = Color4(0.8f, 0.2f, 0.2f, 1.f);
+    MaterialData sphereMaterial{{}, 80.f};
+    sphereMaterial.ambientColor() = Color4(0.f, 0.f, 0.f, 1.f);
+    sphereMaterial.diffuseColor() = Color4(0.8f, 0.2f, 0.2f, 1.f);
+    sphereMaterial.specularColor() = Color4(1.f);
+    sphereMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
+
+    auto sphereObject = new Object3D{_o};
+    sphereObject->translate(Vector3{0.f, 2.5f, 0.f});
+    // sphereObject->translate(Vector3{-2.f, 2.f, -1.f})
+    //              .rotateYLocal(65.0_degf)
+    //              .rotateZLocal(55.0_degf);
+
     /* Create sphere object for being voxelized */
-    (new VoxelizedObject(sphereMesh, sphereColor, _voxelShader, _o, &_voxels))->translate(Vector3{-2.f, 2.f, -1.f})
-                                                                               .rotateYLocal(65.0_degf)
-                                                                               .rotateZLocal(55.0_degf);
+    auto voxelSphere = new VoxelizedObject(sphereMesh, sphereMaterial.diffuseColor(), _voxelShader, sphereObject, &_voxels);
+    /* Create sphere object for visualization */
+    new GlobalIlluminationObject(voxelSphere->mesh(), sphereMaterial, _voxelConeShader, sphereObject, &_illuminationObjects);
+
+    /* add light to the scene */
+    _light = std::unique_ptr<LightData>(new LightData{LightData::Type::Infinite, Color3{1.f}, 1.f});
+    _light->direction() = Vector3(0.3f, 1.f, 0.6f).normalized();
 
     /* Loop at 60 Hz max */
     setSwapInterval(1);
@@ -239,9 +314,15 @@ void GlobalIlluminationExample::drawEvent() {
     /* clear color and depth */
     defaultFramebuffer.clear(FramebufferClear::Color | FramebufferClear::Depth);
 
-    /* @todo: draw nice scenes */
+    // /* @todo: draw nice scenes */
+    // _voxelConeShader.setVoxelWorldProperties(_voxelGridWorldSize, _voxelDimensions)
+    //                 .setCameraPosition(_cameraObject->transformationMatrix().translation())
+    //                 .setVoxelTexture(_voxelTexture)
+    //                 .setLight(*_light);
+    // _camera->draw(_illuminationObjects);
 
     /* debug draw */
+    /* do not use it with more than 256x256x256 grids! */
     /* set voxel visualization parameters */
     Matrix4 modelMatrix = Matrix4::scaling(Vector3{_voxelGridWorldSize / static_cast<Float>(_voxelDimensions)});
 	Matrix4 viewMatrix = _camera->cameraMatrix();
