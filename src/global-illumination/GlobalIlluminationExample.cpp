@@ -179,7 +179,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     _o = new Object3D{&_scene};
 
     /* Create cube */
-    Trade::MeshData3D cube = Primitives::Cube::solid(); //Primitives::Icosphere::solid(4);
+    Trade::MeshData3D cube = Primitives::Cube::solid();
     Mesh mesh{NoCreate};
     std::unique_ptr<Buffer> vertexBuffer, indexBuffer;
     std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(cube, BufferUsage::StaticDraw);
@@ -206,7 +206,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
 
     /* Create floor */
     Trade::MeshData3D floor = Primitives::Cube::solid();
-    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{10.f, 0.1f, 10.f} * 0.5f), floor.positions(0));
+    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{10.f, 0.2f, 10.f} * 0.5f), floor.positions(0));
     std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(floor, BufferUsage::StaticDraw);
     BufferMesh floorMesh;
     floorMesh.mesh = std::unique_ptr<Mesh>(new Mesh{std::move(mesh)});
@@ -220,7 +220,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     floorMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
 
     auto floorObject = new Object3D{_o};
-    floorObject->translate(Vector3{0.f, -1.05f, 0.f});
+    floorObject->translate(Vector3{0.f, -1.1f, 0.f});
 
     /* Create floor object for being voxelized */
     auto voxelFloor = new VoxelizedObject(floorMesh, floorMaterial.diffuseColor(), _voxelShader, floorObject, &_voxels);
