@@ -10,18 +10,18 @@ void main() {
 	if(fragColor.a < 0.5)
 		discard;
 
-	/* dummy lighting to see the voxels better */
-	vec3 normalizedTransformedNormal = normalize(normal);
-	/* light 1 */
-	vec3 lightDirection = normalize(vec3(0.6, 0.3, 0.5));
-	float intensity = dot(normalizedTransformedNormal, lightDirection);
-	/* Diffuse color */
-	vec3 diffuseColor = fragColor.rgb * max(0., intensity);
-	/* light 2 */
-	lightDirection = normalize(vec3(-0.6, -0.3, -0.5));
-	intensity = dot(normalizedTransformedNormal, lightDirection);
-	/* Diffuse color */
-	diffuseColor += fragColor.rgb * max(0., intensity);
+	// /* dummy lighting to see the voxels better */
+	// vec3 normalizedTransformedNormal = normalize(normal);
+	// /* light 1 */
+	// vec3 lightDirection = normalize(vec3(0.6, 0.3, 0.5));
+	// float intensity = dot(normalizedTransformedNormal, lightDirection);
+	// /* Diffuse color */
+	// vec3 diffuseColor = fragColor.rgb * max(0., intensity);
+	// /* light 2 */
+	// lightDirection = normalize(vec3(-0.6, -0.3, -0.5));
+	// intensity = dot(normalizedTransformedNormal, lightDirection);
+	// /* Diffuse color */
+	// diffuseColor += fragColor.rgb * max(0., intensity);
 
-	color = vec4(diffuseColor, 1.);
+	color = vec4(fragColor.rgb, 1.);
 }

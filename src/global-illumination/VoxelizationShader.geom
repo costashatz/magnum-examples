@@ -17,24 +17,28 @@ uniform mat4 projectionMatrixY;
 layout(location = 3)
 uniform mat4 projectionMatrixZ;
 
-layout(location = 5)
+layout(location = 4)
 uniform int voxelDimensions;
 
-layout(location = 6)
+layout(location = 5)
 uniform float voxelSize;
 
-layout(location = 7)
+layout(location = 6)
 uniform float voxelWorldSize;
+
+/* Conservative rasterization is on by default */
+layout(location = 9)
+uniform int conservativeRasterization = 1;
 
 /* outputs to fragment shader */
 #ifdef TEXTURED
 out vec2 texCoords;
 #endif
-out vec3 normal;
+out vec3 worldPosition;
+out vec3 worldNormal;
 out flat int dominantAxis;
 out flat int voxelDims;
 out vec4 boundingBox;
-out vec3 vertexPos;
 out vec3 texPos;
 
 void main() {
@@ -55,56 +59,72 @@ void main() {
 
     float scale = 1. / voxelWorldSize;
 
-    // /* calculate vertex positions */
-    // vec4 positions[3];
-    // positions[0] = projectionMatrix * gl_in[0].gl_Position;
-    // positions[1] = projectionMatrix * gl_in[1].gl_Position;
-    // positions[2] = projectionMatrix * gl_in[2].gl_Position;
+    vec4 vsProjs[3] = vec4[3] (projectionMatrix * gl_in[0].gl_Position,
+                                projectionMatrix * gl_in[1].gl_Position,
+                                projectionMatrix * gl_in[2].gl_Position);
 
-    // /* enlarge the triangle to enable conservative rasterization */
-    // vec4 AABB;
-	// vec2 hPixel = vec2(1. / voxelDimensions, 1. / voxelDimensions);
-	// float pl = 1.4142135637309; //1.4142135637309 / voxelDimensions; //voxelSize;
+    /* Pass axis-aligned, extended bounding box in NDCs */
+    boundingBox = vec4(min(vsProjs[0].xy, min(vsProjs[1].xy, vsProjs[2].xy)),
+                                max(vsProjs[0].xy, max(vsProjs[1].xy, vsProjs[2].xy)));
+    boundingBox = (boundingBox * vec4(0.5) + vec4(0.5)) * voxelDimensions;
 
-	// /* calculate AABB of this triangle */
-	// AABB.xy = positions[0].xy;
-	// AABB.zw = positions[0].xy;
+    /* for code visibility */
+    mat4 viewProjectionInverseMatrix = mat4(1.);
 
-	// AABB.xy = min(positions[1].xy, AABB.xy);
-	// AABB.zw = max(positions[1].xy, AABB.zw);
+    /* Conservative rasterization */
+    if(conservativeRasterization > 0) {
+        viewProjectionInverseMatrix = inverse(projectionMatrix);
+        vec4 projNormal = transpose(viewProjectionInverseMatrix) * vec4(faceNormal, 0);
 
-	// AABB.xy = min(positions[2].xy, AABB.xy);
-	// AABB.zw = max(positions[2].xy, AABB.zw);
+        boundingBox.xy -= vec2(1.0);
+        boundingBox.zw += vec2(1.0);
 
-	// /* Enlarge half-pixel */
-	// AABB.xy -= hPixel;
-	// AABB.zw += hPixel;
+        /* Calculate normal equation of triangle plane. */
+        vec3 normal = cross(vsProjs[1].xyz - vsProjs[0].xyz, vsProjs[0].xyz - vsProjs[2].xyz);
+        normal = projNormal.xyz;
+        float d = dot(vsProjs[0].xyz, normal);
+        float normalSign = (projNormal.z > 0) ? 1.0 : -1.0;
 
-    // /* pass it to the fragment shader */
-    // boundingBox = AABB;
-
-	// /* find 3 triangle edge plane */
-    // vec3 e0 = vec3(positions[1].xy - positions[0].xy, 0);
-	// vec3 e1 = vec3(positions[2].xy - positions[1].xy, 0);
-	// vec3 e2 = vec3(positions[0].xy - positions[2].xy, 0);
-	// vec3 n0 = cross(e0, vec3(0, 0, 1));
-	// vec3 n1 = cross(e1, vec3(0, 0, 1));
-	// vec3 n2 = cross(e2, vec3(0, 0, 1));
-
-	// /* dilate the triangle */
-	// positions[0].xy = positions[0].xy + pl * ((e2.xy / dot(e2.xy, n0.xy)) + (e0.xy / dot(e0.xy, n2.xy)));
-	// positions[1].xy = positions[1].xy + pl * ((e0.xy / dot(e0.xy, n1.xy)) + (e1.xy / dot(e1.xy, n0.xy)));
-	// positions[2].xy = positions[2].xy + pl * ((e1.xy / dot(e1.xy, n2.xy)) + (e2.xy / dot(e2.xy, n1.xy)));
+        /* Convert edges to homogeneous line equations and dilate triangle.
+           See:  http://http.developer.nvidia.com/GPUGems2/gpugems2_chapter42.html
+         */
+        vec3 planes[3]; vec3 intersection[3]; float z[3];
+        vec2 halfPixelSize = vec2(1.0 / voxelDimensions);
+        planes[0] = cross(vsProjs[0].xyw - vsProjs[2].xyw, vsProjs[2].xyw);
+        planes[1] = cross(vsProjs[1].xyw - vsProjs[0].xyw, vsProjs[0].xyw);
+        planes[2] = cross(vsProjs[2].xyw - vsProjs[1].xyw, vsProjs[1].xyw);
+        planes[0].z += normalSign * dot(halfPixelSize, abs(planes[0].xy));
+        planes[1].z += normalSign * dot(halfPixelSize, abs(planes[1].xy));
+        planes[2].z += normalSign * dot(halfPixelSize, abs(planes[2].xy));
+        intersection[0] = cross(planes[0], planes[1]);
+        intersection[1] = cross(planes[1], planes[2]);
+        intersection[2] = cross(planes[2], planes[0]);
+        intersection[0] /= intersection[0].z;
+        intersection[1] /= intersection[1].z;
+        intersection[2] /= intersection[2].z;
+        z[0] = (-intersection[0].x * normal.x - intersection[0].y * normal.y + d) / normal.z;
+        z[1] = (-intersection[1].x * normal.x - intersection[1].y * normal.y + d) / normal.z;
+        z[2] = (-intersection[2].x * normal.x - intersection[2].y * normal.y + d) / normal.z;
+        vsProjs[0].xyz = vec3(intersection[0].xy, z[0]);
+        vsProjs[1].xyz = vec3(intersection[1].xy, z[1]);
+        vsProjs[2].xyz = vec3(intersection[2].xy, z[2]);
+    }
 
     /* For every vertex sent in vertices */
     for(int i = 0; i < gl_in.length(); i++) {
 #ifdef TEXTURED
         texCoords = textureCoords[i];
 #endif
-        normal = transformedNormal[i];
-        gl_Position = projectionMatrix * gl_in[i].gl_Position; //positions[i]; //projectionMatrix * gl_in[i].gl_Position;
-        // vertexPos = positions[i].xyz;
-        texPos = gl_in[i].gl_Position.xyz * scale + 0.5;
+        worldNormal = transformedNormal[i];
+        worldPosition = gl_in[i].gl_Position.xyz / gl_in[i].gl_Position.w;
+        gl_Position = vsProjs[i];
+
+        if(conservativeRasterization > 0) {
+            texPos = (viewProjectionInverseMatrix * vsProjs[i]).xyz * scale + 0.5;
+        }
+        else {
+            texPos = gl_in[i].gl_Position.xyz * scale + 0.5;
+        }
         EmitVertex();
     }
 

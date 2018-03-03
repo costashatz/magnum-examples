@@ -53,7 +53,7 @@ VoxelizationShader::VoxelizationShader(Flags flags) : _flags{flags} {
         .addSource(rs.get("VoxelizationShader.vert"));
     geom.addSource(flags ? "#define TEXTURED\n" : "")
         .addSource(rs.get("VoxelizationShader.geom"));
-    frag//.addSource(flags & Flag::AmbientTexture ? "#define AMBIENT_TEXTURE\n" : "")
+    frag.addSource(flags & Flag::AmbientTexture ? "#define AMBIENT_TEXTURE\n" : "")
         .addSource(flags & Flag::DiffuseTexture ? "#define DIFFUSE_TEXTURE\n" : "")
         // .addSource(flags & Flag::SpecularTexture ? "#define SPECULAR_TEXTURE\n" : "")
         .addSource(rs.get("VoxelizationShader.frag"));
@@ -70,6 +70,11 @@ VoxelizationShader::VoxelizationShader(Flags flags) : _flags{flags} {
     CORRADE_INTERNAL_ASSERT_OUTPUT(link());
 
     /* no need to get uniform locations */
+}
+
+VoxelizationShader& VoxelizationShader::setAmbientTexture(Texture2D& texture) {
+    if(_flags & Flag::AmbientTexture) texture.bind(_ambientTextureBinding);
+    return *this;
 }
 
 VoxelizationShader& VoxelizationShader::setDiffuseTexture(Texture2D& texture) {

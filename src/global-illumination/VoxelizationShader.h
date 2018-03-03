@@ -138,6 +138,14 @@ class VoxelizationShader: public AbstractShaderProgram {
         }
 
         /**
+         * @brief Set ambient color
+         */
+        VoxelizationShader& setAmbientColor(const Color4& color) {
+            setUniform(_ambientColorUniform, color);
+            return *this;
+        }
+
+        /**
          * @brief Set diffuse color
          */
         VoxelizationShader& setDiffuseColor(const Color4& color) {
@@ -170,9 +178,49 @@ class VoxelizationShader: public AbstractShaderProgram {
         }
 
         /**
+         * @brief Set light
+         */
+        VoxelizationShader& setLight(const LightData& light) {
+            LightData::Type type = light.type();
+            setUniform(_lightUniform, (type == LightData::Type::Infinite) ? 0 : (type == LightData::Type::Point) ? 1 : 2);
+            setUniform(_lightUniform + 1, light.color());
+            if(type != LightData::Type::Infinite) {
+                setUniform(_lightUniform + 2, light.position());
+            }
+            if(type != LightData::Type::Point) {
+                setUniform(_lightUniform + 3, light.direction());
+            }
+            if(type == LightData::Type::Spot) {
+                setUniform(_lightUniform + 4, light.spotExponent());
+                setUniform(_lightUniform + 5, light.spotCutoff());
+            }
+            setUniform(_lightUniform + 6, light.intensity());
+            setUniform(_lightUniform + 7, light.constantAttenuation());
+            setUniform(_lightUniform + 8, light.linearAttenuation());
+            setUniform(_lightUniform + 9, light.quadraticAttenuation());
+            return *this;
+        }
+
+        /**
+         * @brief Enable/disable conservative rasterization
+         */
+        VoxelizationShader& setConservativeRasterization(bool enable = true) {
+            if(enable)
+                setUniform(_conservativeRasterizationUniform, 1);
+            else
+                setUniform(_conservativeRasterizationUniform, 0);
+            return *this;
+        }
+
+        /**
          * @brief Set voxel texture
          */
         VoxelizationShader& setVoxelTexture(Texture3D& texture);
+
+        /**
+         * @brief Set ambient texture
+         */
+        VoxelizationShader& setAmbientTexture(Texture2D& texture);
 
         /**
          * @brief Set diffuse texture
@@ -185,12 +233,16 @@ class VoxelizationShader: public AbstractShaderProgram {
             _projectionMatrixXUniform{1},
             _projectionMatrixYUniform{2},
             _projectionMatrixZUniform{3},
-            _diffuseColorUniform{4},
-            _voxelDimsUniform{5},
-            _voxelSizeUniform{6},
-            _voxelWorldSizeUniform{7};
+            _voxelDimsUniform{4},
+            _voxelSizeUniform{5},
+            _voxelWorldSizeUniform{6},
+            _ambientColorUniform{7},
+            _diffuseColorUniform{8},
+            _conservativeRasterizationUniform{9},
+            _lightUniform{10};
         Int _voxelTextureBinding{0},
-            _diffuseTextureBinding{1};
+            _ambientTextureBinding{1},
+            _diffuseTextureBinding{2};
 };
 
 CORRADE_ENUMSET_OPERATORS(VoxelizationShader::Flags)

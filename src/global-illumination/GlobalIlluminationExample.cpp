@@ -318,7 +318,9 @@ void GlobalIlluminationExample::drawEvent() {
                 .setProjectionMatrixY(_voxelProjectionMatY)
                 .setProjectionMatrixZ(_voxelProjectionMatZ)
                 .setVoxelDimensions(_voxelDimensions)
-                .setVoxelTexture(_voxelTexture);
+                .setVoxelTexture(_voxelTexture)
+                .setConservativeRasterization(true)
+                .setLight(*_light);
 
     /* voxelize scene */
     _camera->draw(_voxels);
