@@ -23,6 +23,9 @@ uniform int voxelDimensions;
 layout(location = 6)
 uniform float voxelSize;
 
+layout(location = 7)
+uniform float voxelWorldSize;
+
 /* outputs to fragment shader */
 #ifdef TEXTURED
 out vec2 texCoords;
@@ -32,6 +35,7 @@ out flat int dominantAxis;
 out flat int voxelDims;
 out vec4 boundingBox;
 out vec3 vertexPos;
+out vec3 texPos;
 
 void main() {
     /* pass through voxel dimensions */
@@ -48,6 +52,8 @@ void main() {
     /* 1 = x axis dominant, 2 = y axis dominant, 3 = z axis dominant */
     dominantAxis = (nDotX > nDotY && nDotX > nDotZ) ? 1 : (nDotY > nDotX && nDotY > nDotZ) ? 2 : 3;
     mat4 projectionMatrix = dominantAxis == 1 ? projectionMatrixX : dominantAxis == 2 ? projectionMatrixY : projectionMatrixZ;
+
+    float scale = 1. / voxelWorldSize;
 
     // /* calculate vertex positions */
     // vec4 positions[3];
@@ -98,6 +104,7 @@ void main() {
         normal = transformedNormal[i];
         gl_Position = projectionMatrix * gl_in[i].gl_Position; //positions[i]; //projectionMatrix * gl_in[i].gl_Position;
         // vertexPos = positions[i].xyz;
+        texPos = gl_in[i].gl_Position.xyz * scale + 0.5;
         EmitVertex();
     }
 

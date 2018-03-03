@@ -195,7 +195,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     cubeMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
 
     auto cubeObject = new Object3D{_o};
-    // cubeObject->rotateYLocal(65.0_degf)
+    cubeObject->rotateYLocal(65.0_degf);
     //            .rotateXLocal(35.0_degf)
     //            .rotateZLocal(-55.0_degf);
 
@@ -206,7 +206,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
 
     /* Create floor */
     Trade::MeshData3D floor = Primitives::Cube::solid();
-    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{10.f, 0.1f, 10.f}), floor.positions(0));
+    MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{10.f, 0.1f, 10.f} * 0.5f), floor.positions(0));
     std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(floor, BufferUsage::StaticDraw);
     BufferMesh floorMesh;
     floorMesh.mesh = std::unique_ptr<Mesh>(new Mesh{std::move(mesh)});
@@ -220,7 +220,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     floorMaterial.emissiveColor() = Color4(0.f, 0.f, 0.f, 1.f);
 
     auto floorObject = new Object3D{_o};
-    floorObject->translate(Vector3{0.f, -1.2f, 0.f});
+    floorObject->translate(Vector3{0.f, -1.05f, 0.f});
 
     /* Create floor object for being voxelized */
     auto voxelFloor = new VoxelizedObject(floorMesh, floorMaterial.diffuseColor(), _voxelShader, floorObject, &_voxels);
@@ -229,7 +229,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
 
     // /* Create wall */
     // Trade::MeshData3D wall1 = Primitives::Cube::solid();
-    // MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{10.f, 10.f, 0.1f}), wall1.positions(0));
+    // MeshTools::transformPointsInPlace(Matrix4::scaling(Vector3{10.f, 10.f, 0.1f} * 0.5f), wall1.positions(0));
     // std::tie(mesh, vertexBuffer, indexBuffer) = MeshTools::compile(floor, BufferUsage::StaticDraw);
     // BufferMesh wall1Mesh;
     // wall1Mesh.mesh = std::unique_ptr<Mesh>(new Mesh{std::move(mesh)});
@@ -313,6 +313,7 @@ void GlobalIlluminationExample::drawEvent() {
 
     /* set voxel shader parameters */
     _voxelShader.setVoxelSize(_voxelGridWorldSize / static_cast<Float>(_voxelDimensions))
+                .setVoxelWorldSize(_voxelGridWorldSize)
                 .setProjectionMatrixX(_voxelProjectionMatX)
                 .setProjectionMatrixY(_voxelProjectionMatY)
                 .setProjectionMatrixZ(_voxelProjectionMatZ)
