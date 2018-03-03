@@ -16,7 +16,7 @@ void main() {
 	pos.y = gl_VertexID / (voxelDimensions * voxelDimensions);
 
     /* get color information */
-	color = texture(voxelTexture, pos / voxelDimensions);
+	color = textureLod(voxelTexture, pos / voxelDimensions, 0);
 
     /* set appropriate vertex position */
 	gl_Position = vec4(pos - voxelDimensions * 0.5, 1);

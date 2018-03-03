@@ -131,7 +131,7 @@ vec4 indirectDiffuseLight() {
 
     /* Cone weights. */
     // const float w[3] = {0.25, 0.25, 0.25};
-    const float w[3] = {0.25, 0.25, 0.25};
+    const float w[3] = {0.15, 0.15, 0.15};
 
     /* Starting position
      * We offset forward in normal direction, and backward in cone direction.
@@ -139,7 +139,7 @@ vec4 indirectDiffuseLight() {
      * artifacts
      */
     float voxelWorldSize = voxelGridWorldSize / voxelDimensions;
-    vec3 origin = worldPosition + worldNormal * (1. + 0.75 * 0.707106) * voxelWorldSize;
+    vec3 origin = worldPosition + worldNormal * (1. + 2. * 0.707106) * voxelWorldSize;
     float coneOffset = -0.001;
 
 	/* Find a base for the side cones with the normal as one of its base vectors */
@@ -268,13 +268,13 @@ void main() {
     /* @todo: compute specular 2nd bounce */
     float voxelWorldSize = voxelGridWorldSize / voxelDimensions;
     vec3 reflection = normalize(reflect(normalizedEyeDir, worldNormal));
-    vec3 origin = worldPosition + worldNormal * (1. + 3. * 0.707106) * voxelWorldSize;
+    vec3 origin = worldPosition + worldNormal * (1. + 8. * 0.707106) * voxelWorldSize;
     vec4 specularBounce = 0.5 * coneTrace(origin, reflection, 0.577, maximumDistance);
 
     /* @todo: compute indirect refractive if transparent object */
     vec4 refractiveIndirect = vec4(0., 0., 0., 1.);
     
-    vec4 finalColor = directLighting + diffuseIndirect + specularBounce + refractiveIndirect;
+    vec4 finalColor = directLighting + diffuseIndirect;// + specularBounce + refractiveIndirect;
 
 	color = finalAmbientColor + finalEmissiveColor + finalColor;
 }

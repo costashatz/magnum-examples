@@ -145,7 +145,7 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
     Containers::Array<Color4ub> tmp{Containers::DirectInit, Math::pow<3>(static_cast<UnsignedInt>(_voxelDimensions)), Color4ub(0, 0)};
     ImageView3D image{PixelFormat::RGBA, PixelType::UnsignedByte, Vector3i{_voxelDimensions}, tmp};
     _voxelTexture.setMagnificationFilter(Sampler::Filter::Nearest)
-                 .setMinificationFilter(Sampler::Filter::Linear, Sampler::Mipmap::Linear)
+                 .setMinificationFilter(Sampler::Filter::Nearest, Sampler::Mipmap::Nearest)
                  .setWrapping(Sampler::Wrapping::ClampToBorder)
                  .setStorage(7, TextureFormat::RGBA8, Vector3i{_voxelDimensions})
                  .setSubImage(0, {}, image)
@@ -278,7 +278,9 @@ GlobalIlluminationExample::GlobalIlluminationExample(const Arguments& arguments)
 
     /* add light to the scene */
     _light = std::unique_ptr<LightData>(new LightData{LightData::Type::Infinite, Color3{1.f}, 1.f});
-    _light->direction() = Vector3(0.3f, 1.f, 0.6f).normalized();
+    _light->direction() = Vector3(0.3f, 0.7f, 0.6f).normalized();
+    // _light = std::unique_ptr<LightData>(new LightData{LightData::Type::Point, Color3{1.f}, 2.f});
+    // _light->position() = Vector3(2.f, 3.f, 0.f);
 
     /* Loop at 60 Hz max */
     setSwapInterval(1);
@@ -324,6 +326,7 @@ void GlobalIlluminationExample::drawEvent() {
 
     /* voxelize scene */
     _camera->draw(_voxels);
+    _voxelTexture.generateMipmap();
 
     /* restore renderer/framebuffer */
     defaultFramebuffer.setViewport({{}, viewportSize});
