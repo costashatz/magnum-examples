@@ -205,10 +205,7 @@ class VoxelizationShader: public AbstractShaderProgram {
          * @brief Enable/disable conservative rasterization
          */
         VoxelizationShader& setConservativeRasterization(bool enable = true) {
-            if(enable)
-                setUniform(_conservativeRasterizationUniform, 1);
-            else
-                setUniform(_conservativeRasterizationUniform, 0);
+            setUniform(_conservativeRasterizationUniform, enable);
             return *this;
         }
 

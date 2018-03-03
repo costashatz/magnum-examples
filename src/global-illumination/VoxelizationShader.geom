@@ -28,7 +28,7 @@ uniform float voxelWorldSize;
 
 /* Conservative rasterization is on by default */
 layout(location = 9)
-uniform int conservativeRasterization = 1;
+uniform bool conservativeRasterization;
 
 /* outputs to fragment shader */
 #ifdef TEXTURED
@@ -72,7 +72,7 @@ void main() {
     mat4 viewProjectionInverseMatrix = mat4(1.);
 
     /* Conservative rasterization */
-    if(conservativeRasterization > 0) {
+    if(conservativeRasterization) {
         viewProjectionInverseMatrix = inverse(projectionMatrix);
         vec4 projNormal = transpose(viewProjectionInverseMatrix) * vec4(faceNormal, 0);
 
@@ -119,7 +119,7 @@ void main() {
         worldPosition = gl_in[i].gl_Position.xyz / gl_in[i].gl_Position.w;
         gl_Position = vsProjs[i];
 
-        if(conservativeRasterization > 0) {
+        if(conservativeRasterization) {
             texPos = (viewProjectionInverseMatrix * vsProjs[i]).xyz * scale + 0.5;
         }
         else {
