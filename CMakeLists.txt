@@ -3,7 +3,7 @@
 #
 #   Original authors — credit is appreciated but not required:
 #
-#       2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+#       2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
 #           Vladimír Vondruš <mosra@centrum.cz>
 #
 #   This is free and unencumbered software released into the public domain.
@@ -27,25 +27,7 @@
 #   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 2.8.12)
-
-# CMake policies. 0025 needs to be before project(), so putting all there.
-# Use AppleClang instead of Clang on Apple
-if(POLICY CMP0025)
-    cmake_policy(SET CMP0025 NEW)
-endif()
-# Don't treat imported targets with :: as files
-if(POLICY CMP0028)
-    cmake_policy(SET CMP0028 NEW)
-endif()
-# Enable MACOSX_RPATH by default
-if(POLICY CMP0042)
-    cmake_policy(SET CMP0042 NEW)
-endif()
-# Quoted variables should not be dereferenced
-if(POLICY CMP0054)
-    cmake_policy(SET CMP0054 NEW)
-endif()
+cmake_minimum_required(VERSION 3.1)
 
 # Configuration fails on < 3.4 if only C++ is enabled (CheckFunctionExists
 # macro called from FindX11)
@@ -58,21 +40,27 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/modules/")
 find_package(Magnum REQUIRED)
 
 include(CMakeDependentOption)
-option(WITH_AREALIGHTS_EXAMPLE "Build arealights example" OFF)
-option(WITH_AUDIO_EXAMPLE "Build audio example (requires Magnum Audio library)" OFF)
-option(WITH_BULLET_EXAMPLE "Build Bullet integration example (requires BulletIntegration library)" OFF)
+option(WITH_AREALIGHTS_EXAMPLE "Build Area Lights example (requires the Ui library and some TTF font plugin)" OFF)
+option(WITH_AUDIO_EXAMPLE "Build Audio example (requires the Audio library and the StbVorbisAudioImporter plugin)" OFF)
+option(WITH_BOX2D_EXAMPLE "Build Box2D integration example" OFF)
+option(WITH_BULLET_EXAMPLE "Build Bullet integration example (requires the BulletIntegration library)" OFF)
 option(WITH_DART_EXAMPLE "Build DART integration example (requires DartIntegration library)" OFF)
-cmake_dependent_option(WITH_CUBEMAP_EXAMPLE "Build CubeMap example (requires JpegImporter plugin)" OFF "NOT MAGNUM_TARGET_GLES" OFF)
-cmake_dependent_option(WITH_MOTIONBLUR_EXAMPLE "Build MotionBlur example" OFF "NOT MAGNUM_TARGET_GLES" OFF)
+cmake_dependent_option(WITH_CUBEMAP_EXAMPLE "Build CubeMap example (requires some JPEG importer plugin)" OFF "NOT MAGNUM_TARGET_GLES" OFF)
+option(WITH_IMGUI_EXAMPLE "Build ImGui example" OFF)
+option(WITH_LEAPMOTION_EXAMPLE "Build LeapMotion example" OFF)
+option(WITH_MOUSEINTERACTION_EXAMPLE "Build Mouse Interaction example" OFF)
+cmake_dependent_option(WITH_MOTIONBLUR_EXAMPLE "Build Motion Blur example" OFF "NOT MAGNUM_TARGET_GLES" OFF)
 option(WITH_OVR_EXAMPLE "Build OVR example" OFF)
 option(WITH_PICKING_EXAMPLE "Build Picking example" OFF)
 option(WITH_PRIMITIVES_EXAMPLE "Build Primitives example" OFF)
-option(WITH_SHADOWS_EXAMPLE "Build shadow mapping example" OFF)
-option(WITH_TEXT_EXAMPLE "Build Text example (requires FreeTypeFont plugin)" OFF)
-cmake_dependent_option(WITH_TEXTUREDTRIANGLE_EXAMPLE "Build TexturedTriangle example (requires TgaImporter plugin)" OFF "NOT MAGNUM_TARGET_GLES" OFF)
+option(WITH_SHADOWS_EXAMPLE "Build Shadow Mapping example" OFF)
+option(WITH_TEXT_EXAMPLE "Build Text example (requires some TTF font plugin)" OFF)
+cmake_dependent_option(WITH_TEXTUREDTRIANGLE_EXAMPLE "Build TexturedTriangle example (requires some TGA importer plugin)" OFF "NOT MAGNUM_TARGET_GLES" OFF)
 option(WITH_TRIANGLE_EXAMPLE "Build Triangle example" ON)
 option(WITH_TRIANGLE_PLAIN_GLFW_EXAMPLE "Build Plain GLFW Triangle example" OFF)
-option(WITH_VIEWER_EXAMPLE "Build Viewer example (requires ColladaImporter plugin)" OFF)
+option(WITH_TRIANGLE_SOKOL_EXAMPLE "Build sokol_gfx Triangle example" OFF)
+option(WITH_TRIANGLE_VULKAN_EXAMPLE "Build Vulkan Triangle example" OFF)
+option(WITH_VIEWER_EXAMPLE "Build Viewer example (requires the AnySceneImporter plugin)" OFF)
 if(CORRADE_TARGET_EMSCRIPTEN)
     option(WITH_WEBVR_EXAMPLE "Build WebVR example" OFF)
 endif()

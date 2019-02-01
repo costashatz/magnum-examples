@@ -5,7 +5,7 @@ EGIT_REPO_URI="git://github.com/mosra/magnum-examples.git"
 inherit cmake-utils git-r3
 
 DESCRIPTION="Examples for the Magnum C++11/C++14 graphics engine"
-HOMEPAGE="http://magnum.graphics"
+HOMEPAGE="https://magnum.graphics"
 
 LICENSE="public-domain"
 SLOT="0"
@@ -17,6 +17,7 @@ RDEPEND="
 	dev-libs/magnum-plugins
 	dev-libs/magnum-integration
 	dev-libs/magnum-extras
+	dev-libs/box2d
 	media-libs/openal
 	sci-physics/bullet
 "
@@ -29,9 +30,12 @@ src_configure() {
 		-DCMAKE_BUILD_TYPE=Debug
 		-DWITH_AREALIGHTS_EXAMPLE=ON
 		-DWITH_AUDIO_EXAMPLE=ON
+		-DWITH_BOX2D_EXAMPLE=ON
 		-DWITH_BULLET_EXAMPLE=ON
 		-DWITH_CUBEMAP_EXAMPLE=ON
+		-DWITH_IMGUI_EXAMPLE=OFF
 		-DWITH_MOTIONBLUR_EXAMPLE=ON
+		-DWITH_MOUSEINTERACTION_EXAMPLE=ON
 		-DWITH_PICKING_EXAMPLE=ON
 		-DWITH_PRIMITIVES_EXAMPLE=ON
 		-DWITH_SHADOWS_EXAMPLE=ON
@@ -39,6 +43,7 @@ src_configure() {
 		-DWITH_TEXTUREDTRIANGLE_EXAMPLE=ON
 		-DWITH_TRIANGLE_EXAMPLE=ON
 		-DWITH_TRIANGLE_PLAIN_GLFW_EXAMPLE=OFF
+		-DWITH_TRIANGLE_SOKOL_EXAMPLE=OFF
 		-DWITH_VIEWER_EXAMPLE=ON
 	)
 	cmake-utils_src_configure

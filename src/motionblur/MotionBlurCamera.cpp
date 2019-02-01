@@ -3,7 +3,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -29,23 +29,24 @@
 
 #include "MotionBlurCamera.h"
 
-#include <sstream>
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/Reference.h>
+#include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Resource.h>
-#include <Magnum/DefaultFramebuffer.h>
 #include <Magnum/PixelFormat.h>
-#include <Magnum/Shader.h>
-#include <Magnum/TextureFormat.h>
-#include <Magnum/Version.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Shader.h>
+#include <Magnum/GL/TextureFormat.h>
+#include <Magnum/GL/Version.h>
 
 namespace Magnum { namespace Examples {
 
-MotionBlurCamera::MotionBlurCamera(SceneGraph::AbstractObject3D& object): SceneGraph::Camera3D(object), framebuffer(PixelFormat::RGB, PixelType::UnsignedByte), currentFrame(0), canvas(frames) {
+MotionBlurCamera::MotionBlurCamera(SceneGraph::AbstractObject3D& object): SceneGraph::Camera3D(object), framebuffer(PixelFormat::RGB8Unorm), currentFrame(0), canvas(frames) {
     for(Int i = 0; i != FrameCount; ++i) {
-        (frames[i] = new Texture2D)
-            ->setWrapping(Sampler::Wrapping::ClampToEdge)
-            .setMinificationFilter(Sampler::Filter::Nearest)
-            .setMagnificationFilter(Sampler::Filter::Nearest);
+        (frames[i] = new GL::Texture2D)
+            ->setWrapping(GL::SamplerWrapping::ClampToEdge)
+            .setMinificationFilter(GL::SamplerFilter::Nearest)
+            .setMagnificationFilter(GL::SamplerFilter::Nearest);
     }
 }
 
@@ -60,18 +61,18 @@ void MotionBlurCamera::setViewport(const Vector2i& size) {
     /* Initialize previous frames with black color */
     std::size_t textureSize = size.product()*framebuffer.pixelSize();
     Containers::Array<UnsignedByte> texture{Containers::ValueInit, textureSize};
-    framebuffer.setData(PixelFormat::RGB, PixelType::UnsignedByte, size, texture, BufferUsage::DynamicDraw);
+    framebuffer.setData(PixelFormat::RGB8Unorm, size, texture, GL::BufferUsage::DynamicDraw);
 
     for(Int i = 0; i != FrameCount; ++i)
-        frames[i]->setImage(0, TextureFormat::RGB8, framebuffer);
+        frames[i]->setImage(0, GL::TextureFormat::RGB8, framebuffer);
 }
 
 void MotionBlurCamera::draw(SceneGraph::DrawableGroup3D& group) {
     SceneGraph::Camera3D::draw(group);
 
-    defaultFramebuffer.read({{}, viewport()}, framebuffer, BufferUsage::DynamicDraw);
+    GL::defaultFramebuffer.read({{}, viewport()}, framebuffer, GL::BufferUsage::DynamicDraw);
 
-    frames[currentFrame]->setImage(0, TextureFormat::RGB8, framebuffer);
+    frames[currentFrame]->setImage(0, GL::TextureFormat::RGB8, framebuffer);
 
     canvas.draw(currentFrame);
     currentFrame = (currentFrame+1)%FrameCount;
@@ -80,27 +81,23 @@ void MotionBlurCamera::draw(SceneGraph::DrawableGroup3D& group) {
 MotionBlurCamera::MotionBlurShader::MotionBlurShader() {
     Utility::Resource rs("shaders");
 
-    Shader vert(Version::GL330, Shader::Type::Vertex);
-    Shader frag(Version::GL330, Shader::Type::Fragment);
+    GL::Shader vert(GL::Version::GL330, GL::Shader::Type::Vertex);
+    GL::Shader frag(GL::Version::GL330, GL::Shader::Type::Fragment);
 
     vert.addSource(rs.get("MotionBlurShader.vert"));
     frag.addSource(rs.get("MotionBlurShader.frag"));
 
-    CORRADE_INTERNAL_ASSERT_OUTPUT(Shader::compile({vert, frag}));
+    CORRADE_INTERNAL_ASSERT_OUTPUT(GL::Shader::compile({vert, frag}));
 
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT_OUTPUT(link());
 
-    std::stringstream ss;
-    for(Int i = 0; i != MotionBlurCamera::FrameCount; ++i) {
-        ss.str("");
-        ss << "frame[" << i << "]";
-        setUniform(uniformLocation(ss.str()), i);
-    }
+    for(Int i = 0; i != MotionBlurCamera::FrameCount; ++i)
+        setUniform(uniformLocation(Utility::formatString("frame[{}]", i)), i);
 }
 
-MotionBlurCamera::MotionBlurCanvas::MotionBlurCanvas(Texture2D** frames, Object3D* parent): Object3D(parent), frames(frames) {
+MotionBlurCamera::MotionBlurCanvas::MotionBlurCanvas(GL::Texture2D** frames, Object3D* parent): Object3D(parent), frames(frames) {
     const Vector2 vertices[] = {
         {1.0f, -1.0f},
         {1.0f, 1.0f},
@@ -108,8 +105,8 @@ MotionBlurCamera::MotionBlurCanvas::MotionBlurCanvas(Texture2D** frames, Object3
         {0.0f, 1.0f}
     };
 
-    buffer.setData(vertices, BufferUsage::StaticDraw);
-    mesh.setPrimitive(MeshPrimitive::TriangleStrip)
+    buffer.setData(vertices, GL::BufferUsage::StaticDraw);
+    mesh.setPrimitive(GL::MeshPrimitive::TriangleStrip)
         .setCount(4)
         .addVertexBuffer(buffer, 0, MotionBlurShader::Position());
 }

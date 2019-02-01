@@ -3,7 +3,7 @@
 #
 #   Original authors — credit is appreciated but not required:
 #
-#       2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+#       2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
 #           Vladimír Vondruš <mosra@centrum.cz>
 #       2017 — Jonathan Hale <squareys@googlemail.com>
 #
@@ -28,36 +28,33 @@
 #   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.1)
+
 project(MagnumAreaLightsExample)
 
-# CMake policies: enable MACOSX_RPATH by default
-if(POLICY CMP0042)
-    cmake_policy(SET CMP0042 NEW)
-endif()
-# Don't treat imported targets with :: as files
-if(POLICY CMP0028)
-    cmake_policy(SET CMP0028 NEW)
+# Add module path in case this is project root
+if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../../modules/")
 endif()
 
 find_package(Magnum REQUIRED
+    GL
     Shaders
+    Trade
     Sdl2Application)
 find_package(MagnumExtras REQUIRED Ui)
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
-               ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
-
 corrade_add_resource(AreaLights_RESOURCES resources.conf)
 
 add_executable(magnum-arealights AreaLightsExample.cpp ${AreaLights_RESOURCES})
-target_include_directories(magnum-arealights PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(magnum-arealights
+target_link_libraries(magnum-arealights PRIVATE
     Magnum::Application
+    Magnum::GL
     Magnum::Magnum
     Magnum::Shaders
+    Magnum::Trade
     MagnumExtras::Ui)
 
 install(TARGETS magnum-arealights DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})

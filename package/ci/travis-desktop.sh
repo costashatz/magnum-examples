@@ -11,8 +11,9 @@ cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DWITH_INTERCONNECT=ON \
     -DWITH_TESTSUITE=OFF \
-    -DBUILD_DEPRECATED=$BUILD_DEPRECATED
-make -j install
+    -DBUILD_DEPRECATED=$BUILD_DEPRECATED \
+    -G Ninja
+ninja install
 cd ../..
 
 # Magnum
@@ -27,13 +28,14 @@ cmake .. \
     -DWITH_PRIMITIVES=ON \
     -DWITH_SCENEGRAPH=ON \
     -DWITH_SHADERS=ON \
-    -DWITH_SHAPES=ON \
     -DWITH_TEXT=ON \
     -DWITH_TEXTURETOOLS=ON \
+    -DWITH_TRADE=ON \
     -DWITH_${PLATFORM_GL_API}CONTEXT=ON \
     -DWITH_SDL2APPLICATION=ON \
-    -DBUILD_DEPRECATED=$BUILD_DEPRECATED
-make -j install
+    -DBUILD_DEPRECATED=$BUILD_DEPRECATED \
+    -G Ninja
+ninja install
 cd ../..
 
 # Magnum Integration
@@ -42,10 +44,13 @@ cd magnum-integration
 mkdir build && cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
+    -DIMGUI_DIR=$HOME/imgui \
     -DCMAKE_BUILD_TYPE=Release \
     -DWITH_BULLET=ON \
-    -DWITH_OVR=OFF
-make -j install
+    -DWITH_IMGUI=ON \
+    -DWITH_OVR=OFF \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile Magnum Extras
@@ -55,19 +60,24 @@ mkdir build && cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_BUILD_TYPE=Release \
-    -DWITH_UI=ON
-make -j install
+    -DWITH_UI=ON \
+    -G Ninja
+ninja install
 cd ../..
 
 mkdir build && cd build
 cmake .. \
     -DCMAKE_PREFIX_PATH="$HOME/deps;$HOME/glfw" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DIMGUI_DIR=$HOME/imgui \
     -DWITH_AREALIGHTS_EXAMPLE=ON \
     -DWITH_AUDIO_EXAMPLE=ON \
+    -DWITH_BOX2D_EXAMPLE=$WITH_BOX2D \
     -DWITH_BULLET_EXAMPLE=ON \
     -DWITH_CUBEMAP_EXAMPLE=ON \
+    -DWITH_IMGUI_EXAMPLE=ON \
     -DWITH_MOTIONBLUR_EXAMPLE=ON \
+    -DWITH_MOUSEINTERACTION_EXAMPLE=ON \
     -DWITH_OVR_EXAMPLE=OFF \
     -DWITH_PICKING_EXAMPLE=ON \
     -DWITH_PRIMITIVES_EXAMPLE=ON \
@@ -76,6 +86,8 @@ cmake .. \
     -DWITH_TEXTUREDTRIANGLE_EXAMPLE=ON \
     -DWITH_TRIANGLE_EXAMPLE=ON \
     -DWITH_TRIANGLE_PLAIN_GLFW_EXAMPLE=ON \
-    -DWITH_VIEWER_EXAMPLE=ON
+    -DWITH_TRIANGLE_SOKOL_EXAMPLE=ON \
+    -DWITH_VIEWER_EXAMPLE=ON \
+    -G Ninja
 # Otherwise the job gets killed (probably because using too much memory)
-make -j4
+ninja -j4

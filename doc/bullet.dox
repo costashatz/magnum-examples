@@ -1,7 +1,7 @@
 /*
     This file is part of Magnum.
 
-    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019
               Vladimír Vondruš <mosra@centrum.cz>
     Copyright © 2013 Jan Dupal <dupal.j@gmail.com>
 
@@ -30,20 +30,30 @@ namespace Magnum {
 
 @m_footernavigation
 
-Shows a rotating table full of cubes that you can shoot down.
+A rotating table full of cubes that you can shoot down, showcasing the
+@ref BulletIntegration library together with @ref SceneGraph using
+@ref BulletIntegration::MotionState. It's also possible to visualize various
+properties of the Bullet physics world using @ref BulletIntegration::DebugDraw.
 
 @image html bullet.png
 
-@m_div{m-button m-primary} <a href="http://magnum.graphics/showcase/bullet/">@m_div{m-big} Live web demo @m_enddiv @m_div{m-small} uses WebAssembly & WebGL 2 @m_enddiv </a> @m_enddiv
+@m_div{m-button m-primary} <a href="https://magnum.graphics/showcase/bullet/">@m_div{m-big} Live web demo @m_enddiv @m_div{m-small} uses WebAssembly & WebGL @m_enddiv </a> @m_enddiv
 
 @section examples-bullet-controls Key controls
 
-@m_class{m-label m-default} **Arrow keys** *rotate* the camera around,
-@m_class{m-label m-default} **mouse click** shoots a cube.
+-   @m_class{m-label m-default} **Arrow keys** rotate the camera around
+-   @m_class{m-label m-default} **mouse click** shoots an object
+-   @m_class{m-label m-default} **S** toggles between a box (larger, lighter)
+    or a sphere (smaller but heavier) to shoot
+-   @m_class{m-label m-default} **D** toggles draw mode (solid + wireframe debug
+    overlay, just solid or just wireframe debug)
 
 @section examples-bullet-credits Credits
 
-This example was originally contributed by [Jan Dupal](https://github.com/JanDupal).
+This example was originally contributed by [Jan Dupal](https://github.com/JanDupal)
+and further improved by [Max Schwarz](https://github.com/xqms). The example
+makes use of the Bullet Physics library, see documentation of the
+@ref BulletIntegration namespace for license information.
 
 @section examples-bullet-source Source
 

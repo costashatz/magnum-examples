@@ -11,11 +11,12 @@ mkdir build && cd build || exit /b
 cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps-native \
-    -DCMAKE_INSTALL_RPATH=$HOME/deps-native/lib \
     -DWITH_INTERCONNECT=OFF \
     -DWITH_PLUGINMANAGER=OFF \
-    -DWITH_TESTSUITE=OFF
-make -j install
+    -DWITH_TESTSUITE=OFF \
+    -DWITH_UTILITY=OFF \
+    -G Ninja
+ninja install
 cd ..
 
 # Crosscompile Corrade
@@ -29,8 +30,9 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DWITH_INTERCONNECT=OFF \
-    -DWITH_TESTSUITE=OFF
-make -j install
+    -DWITH_TESTSUITE=OFF \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile Magnum
@@ -52,13 +54,14 @@ cmake .. \
     -DWITH_PRIMITIVES=ON \
     -DWITH_SCENEGRAPH=ON \
     -DWITH_SHADERS=ON \
-    -DWITH_SHAPES=ON \
     -DWITH_TEXT=ON \
     -DWITH_TEXTURETOOLS=ON \
+    -DWITH_TRADE=ON \
     -DWITH_GLFWAPPLICATION=OFF \
     -DWITH_SDL2APPLICATION=ON \
-    -DTARGET_GLES2=$TARGET_GLES2
-make -j install
+    -DTARGET_GLES2=$TARGET_GLES2 \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile Magnum Integration
@@ -74,9 +77,12 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
+    -DIMGUI_DIR=$HOME/imgui \
     -DWITH_BULLET=OFF \
-    -DWITH_OVR=OFF
-make -j install
+    -DWITH_IMGUI=$TARGET_GLES3 \
+    -DWITH_OVR=OFF \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile Magnum Extras
@@ -92,8 +98,9 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
-    -DWITH_UI=OFF
-make -j install
+    -DWITH_UI=OFF \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile
@@ -107,11 +114,15 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
+    -DIMGUI_DIR=$HOME/imgui \
     -DWITH_AREALIGHTS_EXAMPLE=OFF \
     -DWITH_AUDIO_EXAMPLE=OFF \
+    -DWITH_BOX2D_EXAMPLE=OFF \
     -DWITH_BULLET_EXAMPLE=OFF \
     -DWITH_CUBEMAP_EXAMPLE=OFF \
+    -DWITH_IMGUI_EXAMPLE=$TARGET_GLES3 \
     -DWITH_MOTIONBLUR_EXAMPLE=OFF \
+    -DWITH_MOUSEINTERACTION_EXAMPLE=OFF \
     -DWITH_OVR_EXAMPLE=OFF \
     -DWITH_PICKING_EXAMPLE=OFF \
     -DWITH_PRIMITIVES_EXAMPLE=OFF \
@@ -120,7 +131,9 @@ cmake .. \
     -DWITH_TEXTUREDTRIANGLE_EXAMPLE=OFF \
     -DWITH_TRIANGLE_EXAMPLE=OFF \
     -DWITH_TRIANGLE_PLAIN_GLFW_EXAMPLE=OFF \
+    -DWITH_TRIANGLE_SOKOL_EXAMPLE=OFF \
     -DWITH_VIEWER_EXAMPLE=OFF \
-    -DWITH_WEBVR_EXAMPLE=ON
+    -DWITH_WEBVR_EXAMPLE=ON \
+    -G Ninja
 # Otherwise the job gets killed (probably because using too much memory)
-make -j4
+ninja -j4

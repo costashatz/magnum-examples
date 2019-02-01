@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
         2016 — Bill Robinson <airbaggins@gmail.com>
 
@@ -30,8 +30,8 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <Magnum/GL/Mesh.h>
 #include <Magnum/SceneGraph/Drawable.h>
-#include <Magnum/Mesh.h>
 
 namespace Magnum { namespace Examples {
 
@@ -45,12 +45,12 @@ class ShadowReceiverDrawable: public SceneGraph::Drawable3D {
 
         void draw(const Matrix4 &transformationMatrix, SceneGraph::Camera3D& camera) override;
 
-        void setMesh(Mesh& mesh) { _mesh = &mesh; }
+        void setMesh(GL::Mesh& mesh) { _mesh = &mesh; }
 
         void setShader(ShadowReceiverShader& shader) { _shader = &shader; }
 
     private:
-        Mesh* _mesh{};
+        GL::Mesh* _mesh{};
         ShadowReceiverShader* _shader{};
 };
 

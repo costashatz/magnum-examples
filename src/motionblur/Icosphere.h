@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -29,6 +29,7 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <Magnum/GL/GL.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/Shaders/Shaders.h>
@@ -39,14 +40,14 @@ namespace Magnum { namespace Examples {
 
 class Icosphere: public Object3D, SceneGraph::Drawable3D {
     public:
-        explicit Icosphere(Mesh* mesh, Shaders::Phong* shader, const Vector3& color, Object3D* parent, SceneGraph::DrawableGroup3D* group);
+        explicit Icosphere(GL::Mesh* mesh, Shaders::Phong* shader, const Vector3& color, Object3D* parent, SceneGraph::DrawableGroup3D* group);
 
         inline void advance(Rad angle) { rotate(angle, Vector3::zAxis()); }
 
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
     private:
-        Mesh* mesh;
+        GL::Mesh* mesh;
         Shaders::Phong* shader;
         Color3 color;
 };

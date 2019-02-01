@@ -3,7 +3,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -28,8 +28,9 @@
 */
 
 #include <Corrade/Utility/utilities.h>
-#include <Magnum/DefaultFramebuffer.h>
-#include <Magnum/Renderer.h>
+#include <Magnum/Mesh.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Renderer.h>
 #include <Magnum/MeshTools/CompressIndices.h>
 #include <Magnum/MeshTools/Interleave.h>
 #include <Magnum/Platform/Sdl2Application.h>
@@ -48,16 +49,16 @@ class MotionBlurExample: public Platform::Application {
         explicit MotionBlurExample(const Arguments& arguments);
 
     private:
-        void viewportEvent(const Vector2i& size) override;
+        void viewportEvent(ViewportEvent& event) override;
         void drawEvent() override;
 
         Scene3D scene;
         SceneGraph::DrawableGroup3D drawables;
         Object3D* cameraObject;
-        SceneGraph::Camera3D* camera;
-        Buffer buffer;
-        Buffer indexBuffer;
-        Mesh mesh;
+        MotionBlurCamera* camera;
+        GL::Buffer buffer;
+        GL::Buffer indexBuffer;
+        GL::Mesh mesh;
         Shaders::Phong shader;
         Object3D* spheres[3];
 };
@@ -68,20 +69,20 @@ MotionBlurExample::MotionBlurExample(const Arguments& arguments): Platform::Appl
     (camera = new MotionBlurCamera(*cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(Deg(35.0f), 1.0f, 0.001f, 100))
-        .setViewport(defaultFramebuffer.viewport().size());
-    Renderer::setClearColor({0.1f, 0.1f, 0.1f});
-    Renderer::enable(Renderer::Feature::DepthTest);
-    Renderer::enable(Renderer::Feature::FaceCulling);
+        .setViewport(GL::defaultFramebuffer.viewport().size());
+    GL::Renderer::setClearColor({0.1f, 0.1f, 0.1f});
+    GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
 
-    const Trade::MeshData3D data = Primitives::Icosphere::solid(3);
+    const Trade::MeshData3D data = Primitives::icosphereSolid(3);
 
-    buffer.setData(MeshTools::interleave(data.positions(0), data.normals(0)), BufferUsage::StaticDraw);
+    buffer.setData(MeshTools::interleave(data.positions(0), data.normals(0)), GL::BufferUsage::StaticDraw);
 
     Containers::Array<char> indexData;
-    Mesh::IndexType indexType;
+    MeshIndexType indexType;
     UnsignedInt indexStart, indexEnd;
     std::tie(indexData, indexType, indexStart, indexEnd) = MeshTools::compressIndices(data.indices());
-    indexBuffer.setData(indexData, BufferUsage::StaticDraw);
+    indexBuffer.setData(indexData, GL::BufferUsage::StaticDraw);
 
     mesh.setPrimitive(data.primitive())
         .setCount(data.indices().size())
@@ -125,13 +126,13 @@ MotionBlurExample::MotionBlurExample(const Arguments& arguments): Platform::Appl
     setMinimalLoopPeriod(40);
 }
 
-void MotionBlurExample::viewportEvent(const Vector2i& size) {
-    defaultFramebuffer.setViewport({{}, size});
-    camera->setViewport(size);
+void MotionBlurExample::viewportEvent(ViewportEvent& event) {
+    GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
+    camera->setViewport(event.windowSize());
 }
 
 void MotionBlurExample::drawEvent() {
-    defaultFramebuffer.clear(FramebufferClear::Color|FramebufferClear::Depth);
+    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
     camera->draw(drawables);
     swapBuffers();
 

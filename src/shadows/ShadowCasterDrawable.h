@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
         2016 — Bill Robinson <airbaggins@gmail.com>
 
@@ -30,7 +30,7 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <Magnum/Mesh.h>
+#include <Magnum/GL/Mesh.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/Object.h>
 
@@ -43,7 +43,7 @@ class ShadowCasterDrawable: public SceneGraph::Drawable3D {
         explicit ShadowCasterDrawable(SceneGraph::AbstractObject3D& parent, SceneGraph::DrawableGroup3D* drawables);
 
         /** @brief Mesh to use for this drawable and its bounding sphere radius */
-        void setMesh(Mesh& mesh, Float radius) {
+        void setMesh(GL::Mesh& mesh, Float radius) {
             _mesh = &mesh;
             _radius = radius;
         }
@@ -57,7 +57,7 @@ class ShadowCasterDrawable: public SceneGraph::Drawable3D {
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& shadowCamera) override;
 
     private:
-        Mesh* _mesh{};
+        GL::Mesh* _mesh{};
         ShadowCasterShader* _shader{};
         Float _radius;
 };

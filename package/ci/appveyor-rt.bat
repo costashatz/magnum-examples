@@ -29,6 +29,7 @@ cmake .. ^
     -DWITH_INTERCONNECT=OFF ^
     -DWITH_PLUGINMANAGER=OFF ^
     -DWITH_TESTSUITE=OFF ^
+    -DWITH_UTILITY=OFF ^
     -G Ninja || exit /b
 cmake --build . --target install || exit /b
 cd .. || exit /b
@@ -71,9 +72,9 @@ cmake .. ^
     -DWITH_PRIMITIVES=OFF ^
     -DWITH_SCENEGRAPH=OFF ^
     -DWITH_SHADERS=OFF ^
-    -DWITH_SHAPES=OFF ^
     -DWITH_TEXT=OFF ^
     -DWITH_TEXTURETOOLS=OFF ^
+    -DWITH_TRADE=OFF ^
     -DWITH_SDL2APPLICATION=ON ^
     -DTARGET_GLES2=%TARGET_GLES2% ^
     -DBUILD_STATIC=ON ^
@@ -96,6 +97,7 @@ cmake .. ^
     -DOPENGLES3_LIBRARY=%APPVEYOR_BUILD_FOLDER%/angle/winrt/10/src/Release_x64/lib/libGLESv2.lib ^
     -DOPENGLES3_INCLUDE_DIR=%APPVEYOR_BUILD_FOLDER%/angle/include ^
     -DWITH_BULLET=OFF ^
+    -DWITH_IMGUI=OFF ^
     -DWITH_OVR=OFF ^
     -G "%GENERATOR%" -A x64 || exit /b
 cmake --build . --config Release --target install -- /m /v:m || exit /b
@@ -132,9 +134,12 @@ cmake .. ^
     -DSDL2_INCLUDE_DIR=%APPVEYOR_BUILD_FOLDER%/SDL/include ^
     -DWITH_AREALIGHTS_EXAMPLE=OFF ^
     -DWITH_AUDIO_EXAMPLE=OFF ^
+    -DWITH_BOX2D_EXAMPLE=OFF ^
     -DWITH_BULLET_EXAMPLE=OFF ^
     -DWITH_CUBEMAP_EXAMPLE=OFF ^
+    -DWITH_IMGUI_EXAMPLE=OFF ^
     -DWITH_MOTIONBLUR_EXAMPLE=OFF ^
+    -DWITH_MOUSEINTERACTION_EXAMPLE=OFF ^
     -DWITH_OVR_EXAMPLE=OFF ^
     -DWITH_PICKING_EXAMPLE=OFF ^
     -DWITH_PRIMITIVES_EXAMPLE=OFF ^
@@ -143,6 +148,7 @@ cmake .. ^
     -DWITH_TEXTUREDTRIANGLE_EXAMPLE=OFF ^
     -DWITH_TRIANGLE_EXAMPLE=OFF ^
     -DWITH_TRIANGLE_PLAIN_GLFW_EXAMPLE=OFF ^
+    -DWITH_TRIANGLE_SOKOL_EXAMPLE=OFF ^
     -DWITH_VIEWER_EXAMPLE=OFF ^
     -G "%GENERATOR%" -A x64 || exit /b
 cmake --build . --config Release -- /m /v:m || exit /b

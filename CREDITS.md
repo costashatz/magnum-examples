@@ -1,20 +1,13 @@
 Third-party components
 ----------------------
 
--   The images in `cubemap` example are work of Emil Persson, aka Humus --
-    http://www.humus.name, licensed under a [Creative Commons Attribution 3.0 Unported License](http://creativecommons.org/licenses/by/3.0/).
--   The sound file used is a Chimes Sound Effect from
-    http://www.orangefreesounds.com/chimes-sound-effect/, licensed under
-    a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
+[The example documentation](https://doc.magnum.graphics/magnum/example-index.html)
+lists al third party components used in each example. Besides that, there is
+[a list of third-party components](https://doc.magnum.graphics/magnum/credits-third-party.html)
+affecting public use.
 
 Contributors to Magnum examples
 -------------------------------
 
--   Jonathan Hale ([@Squareys](https://github.com/Squareys)) -- Oculus VR
-    example, audio example
--   Jan Dupal ([@JanDupal](https://github.com/JanDupal) -- Bullet example
--   Bill Robinson ([@wivlaro](https://github.com/wivlaro) -- Shadows example
--   Olga Turanksaya ([@olga-python](https://github.com/olga-python)) -- Gentoo
-    ebuild
-
-Big thanks to everyone involved!
+[Detailed contributor list](https://doc.magnum.graphics/magnum/credits-contributors.html#examples)
+is maintained in the documentation. Big thanks to everyone involved!

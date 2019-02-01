@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -29,14 +29,14 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <Magnum/AbstractShaderProgram.h>
+#include <Magnum/GL/AbstractShaderProgram.h>
 #include <Magnum/Math/Matrix4.h>
 
 namespace Magnum { namespace Examples {
 
-class CubeMapShader: public AbstractShaderProgram {
+class CubeMapShader: public GL::AbstractShaderProgram {
     public:
-        typedef Attribute<0, Vector3> Position;
+        typedef GL::Attribute<0, Vector3> Position;
 
         explicit CubeMapShader();
 
@@ -45,7 +45,7 @@ class CubeMapShader: public AbstractShaderProgram {
             return *this;
         }
 
-        CubeMapShader& setTexture(CubeMapTexture& texture);
+        CubeMapShader& setTexture(GL::CubeMapTexture& texture);
 
     private:
         Int _transformationProjectionMatrixUniform;

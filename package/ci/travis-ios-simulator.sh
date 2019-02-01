@@ -12,11 +12,12 @@ mkdir build && cd build
 cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps-native \
-    -DCMAKE_INSTALL_RPATH=$HOME/deps-native/lib \
     -DWITH_INTERCONNECT=OFF \
     -DWITH_PLUGINMANAGER=OFF \
-    -DWITH_TESTSUITE=OFF
-make -j install
+    -DWITH_TESTSUITE=OFF \
+    -DWITH_UTILITY=OFF \
+    -G Ninja
+ninja install
 cd ..
 
 # Crosscompile Corrade
@@ -55,9 +56,9 @@ cmake .. \
     -DWITH_PRIMITIVES=ON \
     -DWITH_SCENEGRAPH=ON \
     -DWITH_SHADERS=ON \
-    -DWITH_SHAPES=ON \
     -DWITH_TEXT=ON \
     -DWITH_TEXTURETOOLS=ON \
+    -DWITH_TRADE=ON \
     -DWITH_GLFWAPPLICATION=OFF \
     -DWITH_SDL2APPLICATION=ON \
     -DTARGET_GLES2=$TARGET_GLES2 \
@@ -77,8 +78,10 @@ cmake .. \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_BUILD_TYPE=Release \
+    -DIMGUI_DIR=$HOME/imgui \
     -DWITH_BULLET=OFF \
     -DWITH_OVR=OFF \
+    -DWITH_IMGUI=$TARGET_GLES3 \
     -DBUILD_STATIC=ON \
     -G Xcode
 set -o pipefail && cmake --build . --config Release --target install | xcpretty
@@ -110,11 +113,15 @@ cmake .. \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_PREFIX_PATH="$HOME/deps;$TRAVIS_BUILD_DIR/sdl2" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DIMGUI_DIR=$HOME/imgui \
     -DWITH_AREALIGHTS_EXAMPLE=OFF \
     -DWITH_AUDIO_EXAMPLE=OFF \
+    -DWITH_BOX2D_EXAMPLE=OFF \
     -DWITH_BULLET_EXAMPLE=OFF \
     -DWITH_CUBEMAP_EXAMPLE=OFF \
+    -DWITH_IMGUI_EXAMPLE=$TARGET_GLES3 \
     -DWITH_MOTIONBLUR_EXAMPLE=OFF \
+    -DWITH_MOUSEINTERACTION_EXAMPLE=OFF \
     -DWITH_OVR_EXAMPLE=OFF \
     -DWITH_PICKING_EXAMPLE=OFF \
     -DWITH_PRIMITIVES_EXAMPLE=OFF \
@@ -123,6 +130,7 @@ cmake .. \
     -DWITH_TEXTUREDTRIANGLE_EXAMPLE=OFF \
     -DWITH_TRIANGLE_EXAMPLE=OFF \
     -DWITH_TRIANGLE_PLAIN_GLFW_EXAMPLE=OFF \
+    -DWITH_TRIANGLE_SOKOL_EXAMPLE=OFF \
     -DWITH_VIEWER_EXAMPLE=OFF \
     -G Xcode
 set -o pipefail && cmake --build . --config Release | xcpretty

@@ -10,8 +10,9 @@ cmake .. \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Release \
     -DWITH_INTERCONNECT=OFF \
-    -DWITH_TESTSUITE=OFF
-make -j install
+    -DWITH_TESTSUITE=OFF \
+    -G Ninja
+ninja install
 cd ../..
 
 # Magnum
@@ -29,11 +30,12 @@ cmake .. \
     -DWITH_PRIMITIVES=ON \
     -DWITH_SCENEGRAPH=ON \
     -DWITH_SHADERS=ON \
-    -DWITH_SHAPES=ON \
     -DWITH_TEXT=ON \
     -DWITH_TEXTURETOOLS=ON \
-    -DWITH_SDL2APPLICATION=ON
-make -j install
+    -DWITH_TRADE=ON \
+    -DWITH_SDL2APPLICATION=ON \
+    -G Ninja
+ninja install
 cd ../..
 
 # Magnum Integration
@@ -43,9 +45,12 @@ mkdir build && cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_BUILD_TYPE=Release \
+    -DIMGUI_DIR=$HOME/imgui \
     -DWITH_BULLET=ON \
-    -DWITH_OVR=OFF
-make -j install
+    -DWITH_IMGUI=$TARGET_GLES3 \
+    -DWITH_OVR=OFF \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile Magnum Extras
@@ -55,19 +60,24 @@ mkdir build && cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_BUILD_TYPE=Release \
-    -DWITH_UI=OFF
-make -j install
+    -DWITH_UI=OFF \
+    -G Ninja
+ninja install
 cd ../..
 
 mkdir build && cd build
 cmake .. \
     -DCMAKE_PREFIX_PATH=$HOME/deps \
     -DCMAKE_BUILD_TYPE=Release \
+    -DIMGUI_DIR=$HOME/imgui \
     -DWITH_AREALIGHTS_EXAMPLE=OFF \
     -DWITH_AUDIO_EXAMPLE=ON \
+    -DWITH_BOX2D_EXAMPLE=ON \
     -DWITH_BULLET_EXAMPLE=ON \
     -DWITH_CUBEMAP_EXAMPLE=OFF \
+    -DWITH_IMGUI_EXAMPLE=$TARGET_GLES3 \
     -DWITH_MOTIONBLUR_EXAMPLE=OFF \
+    -DWITH_MOUSEINTERACTION_EXAMPLE=OFF \
     -DWITH_OVR_EXAMPLE=OFF \
     -DWITH_PICKING_EXAMPLE=OFF \
     -DWITH_PRIMITIVES_EXAMPLE=ON \
@@ -76,6 +86,8 @@ cmake .. \
     -DWITH_TEXTUREDTRIANGLE_EXAMPLE=OFF \
     -DWITH_TRIANGLE_EXAMPLE=ON \
     -DWITH_TRIANGLE_PLAIN_GLFW_EXAMPLE=OFF \
-    -DWITH_VIEWER_EXAMPLE=ON
+    -DWITH_TRIANGLE_SOKOL_EXAMPLE=OFF \
+    -DWITH_VIEWER_EXAMPLE=ON \
+    -G Ninja
 # Otherwise the job gets killed (probably because using too much memory)
-make -j4
+ninja -j4

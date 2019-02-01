@@ -1,6 +1,6 @@
 rem Workaround for CMake not wanting sh.exe on PATH for MinGW. AARGH.
 set PATH=%PATH:C:\Program Files\Git\usr\bin;=%
-set PATH=C:\tools\mingw64\bin;%APPVEYOR_BUILD_FOLDER%\deps\bin;%PATH%
+set PATH=C:\mingw-w64\x86_64-7.2.0-posix-seh-rt_v5-rev1\mingw64\bin;%APPVEYOR_BUILD_FOLDER%\deps\bin;%PATH%
 
 rem Build Bullet
 IF NOT EXIST %APPVEYOR_BUILD_FOLDER%\2.86.1.zip appveyor DownloadFile https://github.com/bulletphysics/bullet3/archive/2.86.1.zip || exit /b
@@ -20,11 +20,11 @@ cmake .. ^
     -DBUILD_OPENGL3_DEMOS=OFF ^
     -DINSTALL_LIBS=ON ^
     -DBUILD_UNIT_TESTS=OFF ^
-    -G "MinGW Makefiles" || exit /b
+    -G Ninja || exit /b
 cmake --build . --target install || exit /b
 cd .. && cd ..
 
-rem Build Corrade. Could not get Ninja to work, meh.
+rem Build Corrade
 git clone --depth 1 git://github.com/mosra/corrade.git || exit /b
 cd corrade || exit /b
 mkdir build && cd build || exit /b
@@ -33,9 +33,9 @@ cmake .. ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
     -DWITH_INTERCONNECT=ON ^
     -DWITH_TESTSUITE=OFF ^
-    -G "MinGW Makefiles" || exit /b
-cmake --build . -- -j || exit /b
-cmake --build . --target install -- -j || exit /b
+    -G Ninja || exit /b
+cmake --build . || exit /b
+cmake --build . --target install || exit /b
 cd .. && cd ..
 
 rem Build Magnum
@@ -53,14 +53,14 @@ cmake .. ^
     -DWITH_PRIMITIVES=ON ^
     -DWITH_SCENEGRAPH=ON ^
     -DWITH_SHADERS=ON ^
-    -DWITH_SHAPES=ON ^
     -DWITH_TEXT=ON ^
     -DWITH_TEXTURETOOLS=ON ^
+    -DWITH_TRADE=ON ^
     -DWITH_SDL2APPLICATION=ON ^
     -DWITH_WGLCONTEXT=ON ^
-    -G "MinGW Makefiles" || exit /b
-cmake --build . -- -j || exit /b
-cmake --build . --target install -- -j || exit /b
+    -G Ninja || exit /b
+cmake --build . || exit /b
+cmake --build . --target install || exit /b
 cd .. && cd ..
 
 rem Build Magnum Integration
@@ -75,11 +75,13 @@ cmake .. ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DCMAKE_PREFIX_PATH=%APPVEYOR_BUILD_FOLDER%/bullet ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
+    -DIMGUI_DIR=%APPVEYOR_BUILD_FOLDER%/deps/imgui ^
     -DWITH_BULLET=ON ^
+    -DWITH_IMGUI=ON ^
     -DWITH_OVR=OFF ^
-    -G "MinGW Makefiles" || exit /b
-cmake --build . -- -j || exit /b
-cmake --build . --target install -- -j || exit /b
+    -G Ninja || exit /b
+cmake --build . || exit /b
+cmake --build . --target install || exit /b
 cd .. && cd ..
 
 rem Build Magnum Extras
@@ -90,9 +92,9 @@ cmake .. ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
     -DWITH_UI=ON ^
-    -G "MinGW Makefiles" || exit /b
-cmake --build . -- -j || exit /b
-cmake --build . --target install -- -j || exit /b
+    -G Ninja || exit /b
+cmake --build . || exit /b
+cmake --build . --target install || exit /b
 cd .. && cd ..
 
 rem Build
@@ -100,11 +102,15 @@ mkdir build && cd build || exit /b
 cmake .. ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DCMAKE_PREFIX_PATH="%APPVEYOR_BUILD_FOLDER%/deps;%APPVEYOR_BUILD_FOLDER%/SDL;%APPVEYOR_BUILD_FOLDER%/openal;%APPVEYOR_BUILD_FOLDER%/bullet" ^
+    -DIMGUI_DIR=%APPVEYOR_BUILD_FOLDER%/deps/imgui ^
     -DWITH_AREALIGHTS_EXAMPLE=ON ^
     -DWITH_AUDIO_EXAMPLE=ON ^
+    -DWITH_BOX2D_EXAMPLE=OFF ^
     -DWITH_BULLET_EXAMPLE=ON ^
     -DWITH_CUBEMAP_EXAMPLE=ON ^
+    -DWITH_IMGUI_EXAMPLE=ON ^
     -DWITH_MOTIONBLUR_EXAMPLE=ON ^
+    -DWITH_MOUSEINTERACTION_EXAMPLE=ON ^
     -DWITH_OVR_EXAMPLE=OFF ^
     -DWITH_PICKING_EXAMPLE=ON ^
     -DWITH_PRIMITIVES_EXAMPLE=ON ^
@@ -113,6 +119,7 @@ cmake .. ^
     -DWITH_TEXTUREDTRIANGLE_EXAMPLE=ON ^
     -DWITH_TRIANGLE_EXAMPLE=ON ^
     -DWITH_TRIANGLE_PLAIN_GLFW_EXAMPLE=ON ^
+    -DWITH_TRIANGLE_SOKOL_EXAMPLE=OFF ^
     -DWITH_VIEWER_EXAMPLE=ON ^
-    -G "MinGW Makefiles" || exit /b
-cmake --build . -- -j || exit /b
+    -G Ninja || exit /b
+cmake --build . || exit /b

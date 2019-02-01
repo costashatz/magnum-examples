@@ -3,7 +3,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -27,9 +27,9 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <Magnum/Buffer.h>
-#include <Magnum/DefaultFramebuffer.h>
-#include <Magnum/Mesh.h>
+#include <Magnum/GL/Buffer.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Mesh.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Shaders/VertexColor.h>
 
@@ -42,8 +42,7 @@ class TriangleExample: public Platform::Application {
     private:
         void drawEvent() override;
 
-        Buffer _buffer;
-        Mesh _mesh;
+        GL::Mesh _mesh;
         Shaders::VertexColor2D _shader;
 };
 
@@ -62,16 +61,17 @@ TriangleExample::TriangleExample(const Arguments& arguments):
         {{ 0.0f,  0.5f}, 0x0000ff_rgbf}     /* Top vertex, blue color */
     };
 
-    _buffer.setData(data, BufferUsage::StaticDraw);
-    _mesh.setPrimitive(MeshPrimitive::Triangles)
-        .setCount(3)
-        .addVertexBuffer(_buffer, 0,
+    GL::Buffer buffer;
+    buffer.setData(data);
+
+    _mesh.setCount(3)
+         .addVertexBuffer(std::move(buffer), 0,
             Shaders::VertexColor2D::Position{},
-            Shaders::VertexColor2D::Color{Shaders::VertexColor2D::Color::Components::Three});
+            Shaders::VertexColor2D::Color3{});
 }
 
 void TriangleExample::drawEvent() {
-    defaultFramebuffer.clear(FramebufferClear::Color);
+    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
     _mesh.draw(_shader);
 

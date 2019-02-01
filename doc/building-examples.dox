@@ -1,7 +1,7 @@
 /*
     This file is part of Magnum.
 
-    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019
               Vladimír Vondruš <mosra@centrum.cz>
 
     Permission is hereby granted, free of charge, to any person obtaining a
@@ -41,10 +41,21 @@ packages for your platform of choice. See @ref building-examples-manual if you
 want to have more control. Cross-compiling is very similar to
 @ref building-cross "cross-compiling of Magnum itself".
 
+-   @ref building-examples-packages-vcpkg
 -   @ref building-examples-packages-arch
 -   @ref building-examples-packages-deb
 -   @ref building-examples-packages-gentoo
 -   @ref building-examples-packages-brew
+
+@subsection building-examples-packages-vcpkg Vcpkg packages on Windows
+
+Unlike with other repositories, Magnum Examples are not available as a
+[Vcpkg](https://github.com/Microsoft/vcpkg) package because Vcpkg primary use
+is for providing libraries to be used by other projects, not for installing
+general-purpose apps.
+
+Please follow the @ref building-examples-manual "manual build instructions"
+below.
 
 @subsection building-examples-packages-arch ArchLinux packages
 
@@ -68,6 +79,12 @@ cd package/archlinux
 makepkg -fp PKGBUILD # or any other PKGBUILD file
 @endcode
 
+@note The PKGBUILDs reference a few external dependencies such as `imgui-src`
+    or (in case of Emscripten) `emscripten-bullet` and `emscripten-box2d`,
+    which are not in AUR. You can find PKGBUILDs for these in
+    https://github.com/mosra/archlinux. You can also edit the package, disable
+    building of affected features and remove the dependency.
+
 Once built, install the package using `pacman`:
 
 @code{.sh}
@@ -79,8 +96,23 @@ Edit the PKGBUILDs if you want to pass additional flags to CMake or
 
 @subsection building-examples-packages-deb Packages for Debian, Ubuntu and derivatives
 
-The `package/debian/` directory contains all files needed for building Debian
-packages. You need @ref building-corrade-packages-deb "Corrade",
+Prebuilt packages of the latest stable version for Ubuntu 14.04, 16.04 and
+18.04 are available through a PPA. To install packages related to Magnum and
+Corrade, you can add the repository and then install the packages with the
+following commands:
+
+@code{.sh}
+sudo add-apt-repository ppa:chrome/magnum.graphics
+sudo apt-get update
+sudo apt-get install magnum-examples
+@endcode
+
+For more information about these packages, please visit
+[the PPA page](https://launchpad.net/~chrome/+archive/ubuntu/magnum.graphics).
+
+To build your own package, the `package/debian/` directory contains all files
+needed for building Debian packages. You need
+@ref building-corrade-packages-deb "Corrade",
 @ref building-packages-deb "Magnum",
 @ref building-plugins-packages-deb "Magnum Plugins",
 @ref building-integration-packages-deb "Magnum Integration" and
@@ -131,13 +163,15 @@ them to `mycmakeargs` in the `*.ebuild` file.
 
 macOS [Homebrew](https://brew.sh) formulas building the latest Git revision are
 in the `package/homebrew` directory. Either use the `*.rb` files directly or
-use the tap at https://github.com/mosra/homebrew-magnum. When installing from
-the `*.rb` files you need to install the @ref building-corrade-packages-brew "Corrade",
-@ref building-packages-brew "Magnum",
-@ref building-plugins-packages-brew "Magnum Plugins",
-@ref building-integration-packages-brew "Magnum Integration" and
-@ref building-extras-packages-brew "Magnum Extras" Homebrew packages first,
-otherwise you can do just this:
+use the tap at https://github.com/mosra/homebrew-magnum. This will install the
+latest stable version of Magnum Examples with all dependencies:
+
+@code{.sh}
+brew install mosra/magnum/magnum-examples
+@endcode
+
+But often you may want to install the latest Git revision of all Magnum
+projects instead:
 
 @code{.sh}
 brew install --HEAD mosra/magnum/corrade
@@ -148,7 +182,13 @@ brew install --HEAD mosra/magnum/magnum-extras
 brew install --HEAD mosra/magnum/magnum-examples
 @endcode
 
-If you want to pass additional flags to CMake or
+When installing from the `*.rb` files you need to install the
+@ref building-corrade-packages-brew "Corrade",
+@ref building-packages-brew "Magnum",
+@ref building-plugins-packages-brew "Magnum Plugins",
+@ref building-integration-packages-brew "Magnum Integration" and
+@ref building-extras-packages-brew "Magnum Extras" Homebrew packages first. If
+you want to pass additional flags to CMake or
 @ref building-examples-features "enable / disable additional features", edit
 the `*.rb` file.
 
@@ -171,16 +211,22 @@ integration libraries, see @ref building-plugins, @ref building-integration and
 @ref building-extras for more information.
 
 -   `WITH_AREALIGHTS_EXAMPLE` -- Build the @ref examples-arealights example.
-    Requires the @ref Ui library and some `TrueTypeFont` plugin.
+    Requires the @ref Ui library and some TTF font plugin such as
+    @ref Text::FreeTypeFont "FreeTypeFont".
 -   `WITH_AUDIO_EXAMPLE` --- Build the @ref examples-audio example. Requires
     the @ref Audio library and the @ref Audio::StbVorbisImporter "StbVorbisAudioImporter" plugin.
+-   `WITH_BOX2D_EXAMPLE` --- Build the @ref examples-box2d example. Depends on
+    [Box2D](https://box2d.org/).
 -   `WITH_BULLET_EXAMPLE` --- Build the @ref examples-bullet example. Requires
     the @ref BulletIntegration library.
 -   `WITH_CUBEMAP_EXAMPLE` --- Build the @ref examples-cubemap example. Requires
-    the @ref Trade::JpegImporter "JpegImporter" plugin, not available in OpenGL
-    ES.
+    some JPEG importer plugin such as @ref Trade::JpegImporter "JpegImporter",
+    not available in OpenGL ES.
+-   `WITH_LEAPMOTION_EXAMPLE` --- Build the @ref examples-leapmotion example.
 -   `WITH_MOTIONBLUR_EXAMPLE` --- Build the @ref examples-motionblur example.
     Not available on OpenGL ES.
+-   `WITH_MOUSEINTERACTION_EXAMPLE` --- Build the @ref examples-mouseinteraction
+    example.
 -   `WITH_OVR_EXAMPLE` --- Build the @ref examples-ovr example. Requires
     the @ref OvrIntegration library.
 -   `WITH_PICKING_EXAMPLE` --- Build the @ref examples-picking example.
@@ -188,19 +234,34 @@ integration libraries, see @ref building-plugins, @ref building-integration and
     example.
 -   `WITH_SHADOWS_EXAMPLE` --- Build the @ref examples-shadows example.
 -   `WITH_TEXT_EXAMPLE` --- Build the @ref examples-text example. Requires
-    the @ref Text library and the @ref Text::FreeTypeFont "FreeTypeFont" plugin.
+    the @ref Text library and some TTF font plugin such as
+    @ref Text::FreeTypeFont "FreeTypeFont".
 -   `WITH_TEXTUREDTRIANGLE_EXAMPLE` --- Build the @ref examples-textured-triangle
-    example. Requires the @ref Trade::JpegImporter "JpegImporter" plugin, not
-    available in OpenGL ES.
+    example. Requires some TGA importer plugin such as
+    @ref Trade::TgaImporter "TgaImporter", not available in OpenGL ES.
 -   `WITH_TRIANGLE_EXAMPLE` --- Build the @ref examples-triangle "Triangle"
     example. Enabled by default.
 -   `WITH_TRIANGLE_PLAIN_GLFW_EXAMPLE` --- Build the
     @ref examples-triangle-plain-glfw "Plain GLFW Triangle" example. Depends on
     [GLFW](http://www.glfw.org/) and a `*Context` library for given platform.
+-   `WITH_TRIANGLE_SOKOL_EXAMPLE` --- Build the
+    @ref examples-triangle-sokol "sokol_gfx Triangle" example. Depends on
+    [GLEW](http://glew.sourceforge.net/).
 -   `WITH_VIEWER_EXAMPLE` --- Build the @ref examples-viewer "Viewer" example.
     Requires the @ref Trade::AnySceneImporter "AnySceneImporter" plugin.
--   `WITH_WEBVRE_EXAMPLE` --- Build the @ref examples-webvr "WebVR" example.
+-   `WITH_WEBVR_EXAMPLE` --- Build the @ref examples-webvr "WebVR" example.
     Available only on @ref CORRADE_TARGET_EMSCRIPTEN "Emscripten".
+
+Besides building the whole project and enabling a particular subset of
+examples, it's also possible to build each example as if the example itself
+would be a project root. For example:
+
+@code{.sh}
+cd magnum-examples
+mkdir build-cubemap && cd build-cubemap
+cmake ../src/cubemap
+# ...
+@endcode
 
 @section building-examples-doc Building documentation
 
@@ -212,7 +273,7 @@ in @ref building-doc.
 
 @subsection building-examples-ci-travis Travis
 
-In `package/ci/` there is a `travis.yml` file with Linux GCC 4.7, macOS,
+In `package/ci/` there is a `travis.yml` file with Linux GCC 4.8, macOS,
 Linux desktop GLES2/GLES3, iOS GLES2/GLES3, Emscripten WebGL1/WebGL2 and
 Android GLES2/GLES3 configuration. Online at https://travis-ci.org/mosra/magnum-examples.
 

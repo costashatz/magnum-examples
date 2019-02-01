@@ -3,7 +3,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -28,15 +28,15 @@
 */
 
 #include <Corrade/PluginManager/Manager.h>
-#include <Magnum/AbstractShaderProgram.h>
-#include <Magnum/Buffer.h>
-#include <Magnum/Context.h>
-#include <Magnum/CubeMapTexture.h>
-#include <Magnum/DefaultFramebuffer.h>
-#include <Magnum/Extensions.h>
-#include <Magnum/Mesh.h>
-#include <Magnum/Renderer.h>
-#include <Magnum/Texture.h>
+#include <Magnum/GL/AbstractShaderProgram.h>
+#include <Magnum/GL/Buffer.h>
+#include <Magnum/GL/Context.h>
+#include <Magnum/GL/CubeMapTexture.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Extensions.h>
+#include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Renderer.h>
+#include <Magnum/GL/Texture.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/Scene.h>
@@ -46,7 +46,6 @@
 #include "CubeMap.h"
 #include "Reflector.h"
 #include "Types.h"
-#include "configure.h"
 
 namespace Magnum { namespace Examples {
 
@@ -55,7 +54,7 @@ class CubeMapExample: public Platform::Application {
         explicit CubeMapExample(const Arguments& arguments);
 
     private:
-        void viewportEvent(const Vector2i& size) override;
+        void viewportEvent(ViewportEvent& event) override;
         void drawEvent() override;
         void keyPressEvent(KeyEvent& event) override;
 
@@ -67,8 +66,8 @@ class CubeMapExample: public Platform::Application {
 };
 
 CubeMapExample::CubeMapExample(const Arguments& arguments): Platform::Application(arguments, Configuration().setTitle("Magnum Cube Map Example")) {
-    Renderer::enable(Renderer::Feature::DepthTest);
-    Renderer::enable(Renderer::Feature::FaceCulling);
+    GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
 
     /* Set up perspective camera */
     (_cameraObject = new Object3D(&_scene))
@@ -76,11 +75,11 @@ CubeMapExample::CubeMapExample(const Arguments& arguments): Platform::Applicatio
     (_camera = new SceneGraph::Camera3D(*_cameraObject))
         ->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(Deg(55.0f), 1.0f, 0.001f, 100.0f))
-        .setViewport(defaultFramebuffer.viewport().size());
+        .setViewport(GL::defaultFramebuffer.viewport().size());
 
     /* Load TGA importer plugin */
-    PluginManager::Manager<Trade::AbstractImporter> manager(MAGNUM_PLUGINS_IMPORTER_DIR);
-    std::unique_ptr<Trade::AbstractImporter> importer = manager.loadAndInstantiate("JpegImporter");
+    PluginManager::Manager<Trade::AbstractImporter> manager;
+    Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("JpegImporter");
     if(!importer) std::exit(1);
 
     _resourceManager.set<Trade::AbstractImporter>("jpeg-importer",
@@ -103,14 +102,14 @@ CubeMapExample::CubeMapExample(const Arguments& arguments): Platform::Applicatio
     _resourceManager.free<Trade::AbstractImporter>();
 }
 
-void CubeMapExample::viewportEvent(const Vector2i& size) {
-    defaultFramebuffer.setViewport({{}, size});
-    _camera->setViewport(size);
+void CubeMapExample::viewportEvent(ViewportEvent& event) {
+    GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
+    _camera->setViewport(event.windowSize());
 }
 
 void CubeMapExample::drawEvent() {
-    defaultFramebuffer.clear(FramebufferClear::Depth);
-    defaultFramebuffer.invalidate({DefaultFramebuffer::InvalidationAttachment::Color});
+    GL::defaultFramebuffer.clear(GL::FramebufferClear::Depth);
+    GL::defaultFramebuffer.invalidate({GL::DefaultFramebuffer::InvalidationAttachment::Color});
 
     _camera->draw(_drawables);
     swapBuffers();

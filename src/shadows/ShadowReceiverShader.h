@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
         2016 — Bill Robinson <airbaggins@gmail.com>
 
@@ -30,18 +30,20 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <Magnum/AbstractShaderProgram.h>
+#include <Magnum/GL/AbstractShaderProgram.h>
 #include <Magnum/Shaders/Generic.h>
 
 namespace Magnum { namespace Examples {
 
 /** @brief Shader that can synthesize shadows on an object */
-class ShadowReceiverShader: public AbstractShaderProgram {
+class ShadowReceiverShader: public GL::AbstractShaderProgram {
     public:
         typedef Shaders::Generic3D::Position Position;
         typedef Shaders::Generic3D::Normal Normal;
 
-        explicit ShadowReceiverShader(Int numShadowLevels);
+        explicit ShadowReceiverShader(NoCreateT): GL::AbstractShaderProgram{NoCreate} {}
+
+        explicit ShadowReceiverShader(std::size_t numShadowLevels);
 
         /**
          * @brief Set transformation and projection matrix
@@ -70,7 +72,7 @@ class ShadowReceiverShader: public AbstractShaderProgram {
         ShadowReceiverShader& setLightDirection(const Vector3& vector3);
 
         /** @brief Set shadow map texture array */
-        ShadowReceiverShader& setShadowmapTexture(Texture2DArray& texture);
+        ShadowReceiverShader& setShadowmapTexture(GL::Texture2DArray& texture);
 
         /**
          * @brief Set thadow bias uniform

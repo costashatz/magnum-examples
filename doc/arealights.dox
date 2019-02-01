@@ -1,7 +1,7 @@
 /*
     This file is part of Magnum.
 
-    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019
               Vladimír Vondruš <mosra@centrum.cz>
     Copyright © 2017 Jonathan Hale <squareys@googlemail.com>
 
@@ -36,7 +36,7 @@ This example is a basic implementation of Real-Time Polygonal-Light Shading
 with Linearly Transformed Cosines. Three lights are displayed, each with
 different orientation and parameters.
 
-@m_div{m-button m-primary} <a href="http://magnum.graphics/showcase/arealights/">@m_div{m-big} Live web demo @m_enddiv @m_div{m-small} uses WebAssembly & WebGL 2 @m_enddiv </a> @m_enddiv
+@m_div{m-button m-primary} <a href="https://magnum.graphics/showcase/arealights/">@m_div{m-big} Live web demo @m_enddiv @m_div{m-small} uses WebAssembly & WebGL 2 @m_enddiv </a> @m_enddiv
 
 @section examples-arealights-controls Controls
 
@@ -63,7 +63,12 @@ This example was originally contributed by [Jonathan Hale](https://github.com/Sq
 The implementation is based on the paper
 ["Real-Time Polygonal-Light Shading with Linearly Transformed Cosines"](https://eheitzresearch.wordpress.com/415-2/)
 by Eric Heitz, Jonathan Dupuy, Stephen Hill and David Neubelt. The `*.dds`
-files are republished with a permission from Eric Heitz.
+files are republished with a permission from Eric Heitz. There's also a
+[Guest Post introducing this example](https://blog.magnum.graphics/guest-posts/area-lights-with-ltcs/)
+on the Magnum Blog.
+
+The example makes use of the Adobe Source Sans Pro font through the @ref Ui
+library, see its documentation for license information.
 
 @section examples-arealights-source Source
 
@@ -74,7 +79,6 @@ Full source code is linked below and together with assets also available in the
 -   @ref arealights/AreaLights.vert "AreaLights.vert"
 -   @ref arealights/AreaLightsExample.cpp "AreaLightsExample.cpp"
 -   @ref arealights/CMakeLists.txt "CMakeLists.txt"
--   @ref arealights/configure.h.cmake "configure.h.cmake"
 -   @ref arealights/resources.conf "resources.conf"
 
 The [ports branch](https://github.com/mosra/magnum-examples/tree/ports/src/arealights)
@@ -86,7 +90,6 @@ order to keep the example code as simple as possible.
 @example arealights/AreaLights.vert @m_examplenavigation{examples-arealights,arealights/} @m_footernavigation
 @example arealights/AreaLightsExample.cpp @m_examplenavigation{examples-arealights,arealights/} @m_footernavigation
 @example arealights/CMakeLists.txt @m_examplenavigation{examples-arealights,arealights/} @m_footernavigation
-@example arealights/configure.h.cmake @m_examplenavigation{examples-arealights,arealights/} @m_footernavigation
 @example arealights/resources.conf @m_examplenavigation{examples-arealights,arealights/} @m_footernavigation
 
 */

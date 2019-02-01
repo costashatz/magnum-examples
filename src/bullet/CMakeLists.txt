@@ -3,7 +3,7 @@
 #
 #   Original authors — credit is appreciated but not required:
 #
-#       2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+#       2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
 #           Vladimír Vondruš <mosra@centrum.cz>
 #       2013 — Jan Dupal <dupal.j@gmail.com>
 #
@@ -28,45 +28,37 @@
 #   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 2.8.12)
-
-# CMake policies. 0025 needs to be before project(), so putting all there.
-# Use AppleClang instead of Clang on Apple
-if(POLICY CMP0025)
-    cmake_policy(SET CMP0025 NEW)
-endif()
-# Don't treat imported targets with :: as files
-if(POLICY CMP0028)
-    cmake_policy(SET CMP0028 NEW)
-endif()
-# Enable MACOSX_RPATH by default
-if(POLICY CMP0042)
-    cmake_policy(SET CMP0042 NEW)
-endif()
-# Quoted variables should not be dereferenced
-if(POLICY CMP0054)
-    cmake_policy(SET CMP0054 NEW)
-endif()
+cmake_minimum_required(VERSION 3.1)
 
 project(MagnumBulletExample)
 
+# Add module path in case this is project root
+if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../../modules/")
+endif()
+
 find_package(Magnum REQUIRED
-    DebugTools
+    GL
+    MeshTools
+    Primitives
     SceneGraph
-    Shapes
-    Sdl2Application)
-find_package(MagnumIntegration REQUIRED
-    Bullet)
+    Sdl2Application
+    Shaders
+    Trade)
+find_package(MagnumIntegration REQUIRED Bullet)
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
 add_executable(magnum-bullet BulletExample.cpp)
-target_link_libraries(magnum-bullet
+target_link_libraries(magnum-bullet PRIVATE
     Magnum::Application
-    Magnum::DebugTools
+    Magnum::GL
     Magnum::Magnum
+    Magnum::MeshTools
+    Magnum::Primitives
     Magnum::SceneGraph
-    Magnum::Shapes
+    Magnum::Shaders
+    Magnum::Trade
     MagnumIntegration::Bullet)
 
 install(TARGETS magnum-bullet DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})

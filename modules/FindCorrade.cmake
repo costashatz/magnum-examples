@@ -62,8 +62,6 @@
 #
 # Features of found Corrade library are exposed in these variables:
 #
-#  CORRADE_GCC47_COMPATIBILITY  - Defined if compiled with compatibility mode
-#   for GCC 4.7
 #  CORRADE_MSVC2017_COMPATIBILITY - Defined if compiled with compatibility
 #   mode for MSVC 2017
 #  CORRADE_MSVC2015_COMPATIBILITY - Defined if compiled with compatibility
@@ -82,6 +80,8 @@
 #  CORRADE_TARGET_WINDOWS_RT    - Defined if compiled for Windows RT
 #  CORRADE_TARGET_EMSCRIPTEN    - Defined if compiled for Emscripten
 #  CORRADE_TARGET_ANDROID       - Defined if compiled for Android
+#  CORRADE_PLUGINMANAGER_NO_DYNAMIC_PLUGIN_SUPPORT - Defined if PluginManager
+#   doesn't support dynamic plugin loading due to platform limitations
 #  CORRADE_TESTSUITE_TARGET_XCTEST - Defined if TestSuite is targetting Xcode
 #   XCTest
 #  CORRADE_UTILITY_USE_ANSI_COLORS - Defined if ANSI escape sequences are used
@@ -92,6 +92,7 @@
 #  CORRADE_INCLUDE_DIR          - Root include dir
 #  CORRADE_*_LIBRARY_DEBUG      - Debug version of given library, if found
 #  CORRADE_*_LIBRARY_RELEASE    - Release version of given library, if found
+#  CORRADE_*_EXECUTABLE         - Location of given executable, if found
 #  CORRADE_USE_MODULE           - Path to UseCorrade.cmake module (included
 #   automatically)
 #  CORRADE_TESTSUITE_XCTEST_RUNNER - Path to XCTestRunner.mm.in file
@@ -106,10 +107,10 @@
 # following variables are included just for backwards compatibility and only if
 # :variable:`CORRADE_BUILD_DEPRECATED` is enabled:
 #
-#  CORRADE_*_LIBRARIES          - Expands to ``Corrade::*`` target. Use
-#   ``Corrade::*`` target directly instead.
 #  CORRADE_CXX_FLAGS            - Pedantic compile flags. Use
-#   :prop_tgt:`CORRADE_USE_PEDANTIC_FLAGS` property instead.
+#   :prop_tgt:`CORRADE_USE_PEDANTIC_FLAGS` property or
+#   :variable:`CORRADE_PEDANTIC_COMPILER_DEFINITIONS` /
+#   :variable:`CORRADE_PEDANTIC_COMPILER_OPTIONS` list variables instead.
 #
 # Corrade provides these macros and functions:
 #
@@ -120,12 +121,16 @@
 #  corrade_add_test(<test name>
 #                   <sources>...
 #                   [LIBRARIES <libraries>...]
-#                   [FILES <files>...])
+#                   [FILES <files>...]
+#                   [ARGUMENTS <arguments>...])
 #
-# Test name is also executable name. You can also specify libraries to link
-# with instead of using :command:`target_link_libraries()`.
-# ``Corrade::TestSuite`` target is linked automatically to each test. Note
+# Test name is also executable name. You can use ``LIBRARIES`` to specify
+# libraries to link with instead of using :command:`target_link_libraries()`.
+# The ``Corrade::TestSuite`` target is linked automatically to each test. Note
 # that the :command:`enable_testing()` function must be called explicitly.
+# Arguments passed after ``ARGUMENTS`` will be appended to the test
+# command line. ``ARGUMENTS`` are supported everywhere except when
+# ``CORRADE_TESTSUITE_TARGET_XCTEST`` is enabled.
 #
 # You can list files needed by the test in the ``FILES`` section. If given
 # filename is relative, it is treated relatively to `CMAKE_CURRENT_SOURCE_DIR`.
@@ -234,7 +239,7 @@
 #   This file is part of Corrade.
 #
 #   Copyright © 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016,
-#               2017, 2018 Vladimír Vondruš <mosra@centrum.cz>
+#               2017, 2018, 2019 Vladimír Vondruš <mosra@centrum.cz>
 #
 #   Permission is hereby granted, free of charge, to any person obtaining a
 #   copy of this software and associated documentation files (the "Software"),
@@ -277,7 +282,6 @@ endif()
 # Read flags from configuration
 file(READ ${_CORRADE_CONFIGURE_FILE} _corradeConfigure)
 set(_corradeFlags
-    GCC47_COMPATIBILITY
     MSVC2015_COMPATIBILITY
     MSVC2017_COMPATIBILITY
     BUILD_DEPRECATED
@@ -290,6 +294,7 @@ set(_corradeFlags
     TARGET_WINDOWS_RT
     TARGET_EMSCRIPTEN
     TARGET_ANDROID
+    PLUGINMANAGER_NO_DYNAMIC_PLUGIN_SUPPORT
     TESTSUITE_TARGET_XCTEST
     UTILITY_USE_ANSI_COLORS)
 foreach(_corradeFlag ${_corradeFlags})
@@ -382,8 +387,8 @@ foreach(_component ${Corrade_FIND_COMPONENTS})
             endif()
         endif()
 
-        # Header-only library components (CMake >= 3.0)
-        if(_component MATCHES ${_CORRADE_HEADER_ONLY_COMPONENTS} AND NOT CMAKE_VERSION VERSION_LESS 3.0.0)
+        # Header-only library components
+        if(_component MATCHES ${_CORRADE_HEADER_ONLY_COMPONENTS})
             add_library(Corrade::${_component} INTERFACE IMPORTED)
         endif()
 
@@ -418,13 +423,18 @@ foreach(_component ${Corrade_FIND_COMPONENTS})
                 find_file(CORRADE_TESTSUITE_XCTEST_RUNNER XCTestRunner.mm.in
                     PATH_SUFFIXES share/corrade/TestSuite)
                 set(CORRADE_TESTSUITE_XCTEST_RUNNER_NEEDED CORRADE_TESTSUITE_XCTEST_RUNNER)
-            endif()
 
             # ADB runner file
-            if(CORRADE_TARGET_ANDROID)
+            elseif(CORRADE_TARGET_ANDROID)
                 find_file(CORRADE_TESTSUITE_ADB_RUNNER AdbRunner.sh
                     PATH_SUFFIXES share/corrade/TestSuite)
                 set(CORRADE_TESTSUITE_ADB_RUNNER_NEEDED CORRADE_TESTSUITE_ADB_RUNNER)
+
+            # Emscripten runner file
+            elseif(CORRADE_TARGET_EMSCRIPTEN)
+                find_file(CORRADE_TESTSUITE_EMSCRIPTEN_RUNNER EmscriptenRunner.html.in
+                    PATH_SUFFIXES share/corrade/TestSuite)
+                set(CORRADE_TESTSUITE_EMSCRIPTEN_RUNNER_NEEDED CORRADE_TESTSUITE_EMSCRIPTEN_RUNNER)
             endif()
 
         # Utility library (contains all setup that is used by others)
@@ -434,26 +444,10 @@ foreach(_component ${Corrade_FIND_COMPONENTS})
                 INTERFACE_INCLUDE_DIRECTORIES ${CORRADE_INCLUDE_DIR})
 
             # Require (at least) C++11 for users
-            if(NOT CMAKE_VERSION VERSION_LESS 3.0.0)
-                set_property(TARGET Corrade::${_component} PROPERTY
-                    INTERFACE_CORRADE_CXX_STANDARD 11)
-                set_property(TARGET Corrade::${_component} APPEND PROPERTY
-                    COMPATIBLE_INTERFACE_NUMBER_MAX CORRADE_CXX_STANDARD)
-            else()
-                # 2.8.12 is fucking buggy shit. Besides the fact that it
-                # doesn't know COMPATIBLE_INTERFACE_NUMBER_MAX, if I
-                # define_property() so I can inherit it from directory on a
-                # target, then I can't use it in COMPATIBLE_INTERFACE_STRING
-                # to inherit it from interfaces BECAUSE!! it thinks that it is
-                # not an user-defined property anymore. So I need to have two
-                # sets of properties, CORRADE_CXX_STANDARD_ used silently for
-                # inheritance from interfaces and CORRADE_CXX_STANDARD used
-                # publicly for inheritance from directories. AAAAAAAAARGH.
-                set_property(TARGET Corrade::${_component} PROPERTY
-                    INTERFACE_CORRADE_CXX_STANDARD_ 11)
-                set_property(TARGET Corrade::${_component} APPEND PROPERTY
-                    COMPATIBLE_INTERFACE_STRING CORRADE_CXX_STANDARD_)
-            endif()
+            set_property(TARGET Corrade::${_component} PROPERTY
+                INTERFACE_CORRADE_CXX_STANDARD 11)
+            set_property(TARGET Corrade::${_component} APPEND PROPERTY
+                COMPATIBLE_INTERFACE_NUMBER_MAX CORRADE_CXX_STANDARD)
 
             # AndroidLogStreamBuffer class needs to be linked to log library
             if(CORRADE_TARGET_ANDROID)
@@ -470,11 +464,10 @@ foreach(_component ${Corrade_FIND_COMPONENTS})
             mark_as_advanced(_CORRADE_${_COMPONENT}_INCLUDE_DIR)
         endif()
 
-        # Add inter-library dependencies (except for the header-only libraries
-        # on 2.8.12)
-        if(_component MATCHES ${_CORRADE_LIBRARY_COMPONENTS} AND (NOT CMAKE_VERSION VERSION_LESS 3.0.0 OR NOT _component MATCHES ${_CORRADE_HEADER_ONLY_COMPONENTS}))
+        # Add inter-library dependencies
+        if(_component MATCHES ${_CORRADE_LIBRARY_COMPONENTS} OR _component MATCHES ${_CORRADE_HEADER_ONLY_COMPONENTS})
             foreach(_dependency ${_CORRADE_${_COMPONENT}_DEPENDENCIES})
-                if(_dependency MATCHES ${_CORRADE_LIBRARY_COMPONENTS} AND (NOT CMAKE_VERSION VERSION_LESS 3.0.0 OR NOT _dependency MATCHES ${_CORRADE_HEADER_ONLY_COMPONENTS}))
+                if(_dependency MATCHES ${_CORRADE_LIBRARY_COMPONENTS} OR _dependency MATCHES ${_CORRADE_HEADER_ONLY_COMPONENTS})
                     set_property(TARGET Corrade::${_component} APPEND PROPERTY
                         INTERFACE_LINK_LIBRARIES Corrade::${_dependency})
                 endif()
@@ -488,11 +481,6 @@ foreach(_component ${Corrade_FIND_COMPONENTS})
             set(Corrade_${_component}_FOUND FALSE)
         endif()
     endif()
-
-    # Deprecated variables
-    if(CORRADE_BUILD_DEPRECATED AND _component MATCHES ${_CORRADE_LIBRARY_COMPONENTS} AND NOT _component MATCHES ${_CORRADE_HEADER_ONLY_COMPONENTS})
-        set(CORRADE_${_COMPONENT}_LIBRARIES Corrade::${_component})
-    endif()
 endforeach()
 
 include(FindPackageHandleStandardArgs)
@@ -502,6 +490,7 @@ find_package_handle_standard_args(Corrade REQUIRED_VARS
     _CORRADE_CONFIGURE_FILE
     ${CORRADE_TESTSUITE_XCTEST_RUNNER_NEEDED}
     ${CORRADE_TESTSUITE_ADB_RUNNER_NEEDED}
+    ${CORRADE_TESTSUITE_EMSCRIPTEN_RUNNER_NEEDED}
     HANDLE_COMPONENTS)
 
 # Finalize the finding process

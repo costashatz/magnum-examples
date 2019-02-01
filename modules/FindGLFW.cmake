@@ -2,12 +2,14 @@
 # Find GLFW
 # ---------
 #
-# Finds the GLFW library. This module defines:
+# Finds the GLFW library using its cmake config if that exists, otherwise
+# falls back to finding it manually. This module defines:
 #
 #  GLFW_FOUND               - True if GLFW library is found
 #  GLFW::GLFW               - GLFW imported target
 #
-# Additionally these variables are defined for internal usage:
+# Additionally, in case the config was not found, these variables are defined
+# for internal usage:
 #
 #  GLFW_LIBRARY             - GLFW library
 #  GLFW_INCLUDE_DIR         - Root include dir
@@ -16,7 +18,7 @@
 #
 #   This file is part of Magnum.
 #
-#   Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+#   Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019
 #             Vladimír Vondruš <mosra@centrum.cz>
 #   Copyright © 2016 Jonathan Hale <squareys@googlemail.com>
 #
@@ -39,6 +41,29 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
+# GLFW installs cmake package config files to shared/ folder which handles
+# dependencies in case GLFW is built statically. Try to find first, quietly, so
+# it doesn't print loud messages when it's not found, since that's okay.
+find_package(glfw3 CONFIG QUIET)
+
+if(TARGET glfw)
+    if(NOT TARGET GLFW::GLFW)
+        # Aliases of (global) targets are only supported in CMake 3.11, so we
+        # work around it by this. This is easier than fetching all possible
+        # properties (which are impossible to track of) and then attempting to
+        # rebuild them into a new target.
+        add_library(GLFW::GLFW INTERFACE IMPORTED)
+        set_target_properties(GLFW::GLFW PROPERTIES INTERFACE_LINK_LIBRARIES glfw)
+    endif()
+
+    # Just to make FPHSA print some meaningful location, nothing else
+    get_target_property(_GLFW_INTERFACE_INCLUDE_DIRECTORIES glfw INTERFACE_INCLUDE_DIRECTORIES)
+    find_package_handle_standard_args("GLFW" DEFAULT_MSG
+        _GLFW_INTERFACE_INCLUDE_DIRECTORIES)
+    return()
+endif()
+
+# In case no config file was found, try manually finding the library.
 find_library(GLFW_LIBRARY NAMES glfw glfw3)
 
 # Include dir
@@ -51,23 +76,7 @@ find_package_handle_standard_args("GLFW" DEFAULT_MSG
     GLFW_INCLUDE_DIR)
 
 if(NOT TARGET GLFW::GLFW)
-    # CMake 3.0 doesn't propagate the local target as dependency upwards
-    # the tree and then complains that GLFW::GLFW target was not found,
-    # which it shouldn't. This is reproducible with the base bootstrap
-    # project *and* when using Magnum as CMake subproject. Works with both
-    # 2.8.12 and 3.1, so I'm assuming this is a CMake 3.0 bug. The
-    # workaround is to make the target GLOBAL so it's propagated upwards
-    # the tree unconditionally. For some reason, UNKNOWN targets can't be
-    # marked as GLOBAL, so I'm  biting the bullet and saying the library is
-    # shared -- CMake 3.0 is only on Debian Jessie now and I'm assuming GLFW
-    # comes from system package, which *should be* shared. Hopefully this won't
-    # bite back in the future.
-    if(CMAKE_VERSION VERSION_GREATER "2.8.12.2" AND CMAKE_VERSION VERSION_LESS "3.1.0")
-        set(_GLFW_IMPORTED_LIBRARY_KIND SHARED IMPORTED GLOBAL)
-    else()
-        set(_GLFW_IMPORTED_LIBRARY_KIND UNKNOWN IMPORTED)
-    endif()
-    add_library(GLFW::GLFW ${_GLFW_IMPORTED_LIBRARY_KIND})
+    add_library(GLFW::GLFW UNKNOWN IMPORTED)
 
     # Work around BUGGY framework support on macOS
     # https://cmake.org/Bug/view.php?id=14105
@@ -80,3 +89,5 @@ if(NOT TARGET GLFW::GLFW)
     set_property(TARGET GLFW::GLFW PROPERTY
         INTERFACE_INCLUDE_DIRECTORIES ${GLFW_INCLUDE_DIR})
 endif()
+
+mark_as_advanced(GLFW_LIBRARY GLFW_INCLUDE_DIR)

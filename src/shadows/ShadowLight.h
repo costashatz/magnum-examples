@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
         2016 — Bill Robinson <airbaggins@gmail.com>
 
@@ -30,9 +30,9 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <Magnum/Framebuffer.h>
 #include <Magnum/Resource.h>
-#include <Magnum/TextureArray.h>
+#include <Magnum/GL/Framebuffer.h>
+#include <Magnum/GL/TextureArray.h>
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/AbstractFeature.h>
@@ -103,14 +103,14 @@ class ShadowLight: public SceneGraph::Camera3D {
 
         std::vector<Vector4> calculateClipPlanes();
 
-        Texture2DArray& shadowTexture() { return _shadowTexture; }
+        GL::Texture2DArray& shadowTexture() { return _shadowTexture; }
 
     private:
         Object3D& _object;
-        Texture2DArray _shadowTexture;
+        GL::Texture2DArray _shadowTexture;
 
         struct ShadowLayerData {
-            Framebuffer shadowFramebuffer;
+            GL::Framebuffer shadowFramebuffer;
             Matrix4 shadowCameraMatrix;
             Matrix4 shadowMatrix;
             Vector2 orthographicSize;

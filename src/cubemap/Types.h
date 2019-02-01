@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -30,16 +30,17 @@
 */
 
 #include <Magnum/ResourceManager.h>
+#include <Magnum/GL/GL.h>
 #include <Magnum/SceneGraph/MatrixTransformation3D.h>
 #include <Magnum/Trade/Trade.h>
 
 namespace Magnum {
 
-extern template class ResourceManager<Buffer, Mesh, Trade::AbstractImporter, Texture2D, CubeMapTexture, AbstractShaderProgram>;
+extern template class ResourceManager<GL::Buffer, GL::Mesh, Trade::AbstractImporter, GL::Texture2D, GL::CubeMapTexture, GL::AbstractShaderProgram>;
 
 namespace Examples {
 
-typedef ResourceManager<Buffer, Mesh, Trade::AbstractImporter, Texture2D, CubeMapTexture, AbstractShaderProgram> CubeMapResourceManager;
+typedef ResourceManager<GL::Buffer, GL::Mesh, Trade::AbstractImporter, GL::Texture2D, GL::CubeMapTexture, GL::AbstractShaderProgram> CubeMapResourceManager;
 typedef SceneGraph::Object<SceneGraph::MatrixTransformation3D> Object3D;
 typedef SceneGraph::Scene<SceneGraph::MatrixTransformation3D> Scene3D;
 

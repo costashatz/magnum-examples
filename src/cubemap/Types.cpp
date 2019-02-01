@@ -3,7 +3,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -29,15 +29,15 @@
 
 #include "Types.h"
 
-#include <Magnum/AbstractShaderProgram.h>
-#include <Magnum/Buffer.h>
-#include <Magnum/CubeMapTexture.h>
-#include <Magnum/Mesh.h>
-#include <Magnum/Texture.h>
+#include <Magnum/GL/AbstractShaderProgram.h>
+#include <Magnum/GL/Buffer.h>
+#include <Magnum/GL/CubeMapTexture.h>
+#include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Texture.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
 namespace Magnum {
 
-template class ResourceManager<Buffer, Mesh, Trade::AbstractImporter, Texture2D, CubeMapTexture, AbstractShaderProgram>;
+template class ResourceManager<GL::Buffer, GL::Mesh, Trade::AbstractImporter, GL::Texture2D, GL::CubeMapTexture, GL::AbstractShaderProgram>;
 
 }

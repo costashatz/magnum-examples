@@ -3,7 +3,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
         2016 — Bill Robinson <airbaggins@gmail.com>
 
@@ -30,17 +30,17 @@
 
 #include "DebugLines.h"
 
+#include <Magnum/GL/Renderer.h>
 #include <Magnum/SceneGraph/Camera.h>
-#include <Magnum/Renderer.h>
 
 #include "ShadowLight.h"
 
 namespace Magnum { namespace Examples {
 
-DebugLines::DebugLines(): _mesh{MeshPrimitive::Lines} {
+DebugLines::DebugLines(): _mesh{GL::MeshPrimitive::Lines} {
     _mesh.addVertexBuffer(_buffer, 0,
         Shaders::VertexColor3D::Position{},
-        Shaders::VertexColor3D::Color{Shaders::VertexColor3D::Color::Components::Three});
+        Shaders::VertexColor3D::Color3{});
 }
 
 void DebugLines::reset() {
@@ -50,12 +50,12 @@ void DebugLines::reset() {
 
 void DebugLines::draw(const Matrix4& transformationProjectionMatrix) {
     if(!_lines.empty()) {
-        Renderer::disable(Renderer::Feature::DepthTest);
-        _buffer.setData(_lines, BufferUsage::StreamDraw);
+        GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
+        _buffer.setData(_lines, GL::BufferUsage::StreamDraw);
         _mesh.setCount(_lines.size());
         _shader.setTransformationProjectionMatrix(transformationProjectionMatrix);
         _mesh.draw(_shader);
-        Renderer::enable(Renderer::Feature::DepthTest);
+        GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
     }
 }
 

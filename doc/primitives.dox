@@ -1,7 +1,7 @@
 /*
     This file is part of Magnum.
 
-    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+    Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019
               Vladimír Vondruš <mosra@centrum.cz>
 
     Permission is hereby granted, free of charge, to any person obtaining a
@@ -42,7 +42,7 @@ basic user interaction, introducing these new features:
 This example displays colored cube with ability to change its color and rotate
 it using mouse.
 
-@m_div{m-button m-primary} <a href="http://magnum.graphics/showcase/primitives/">@m_div{m-big}Live web demo @m_enddiv @m_div{m-small} uses WebAssembly & WebGL @m_enddiv </a> @m_enddiv
+@m_div{m-button m-primary} <a href="https://magnum.graphics/showcase/primitives/">@m_div{m-big}Live web demo @m_enddiv @m_div{m-small} uses WebAssembly & WebGL @m_enddiv </a> @m_enddiv
 
 @section examples-primitives-setup Setting up and preparing the mesh
 
@@ -72,14 +72,14 @@ rendering, but it will speed things up as only front-facing faces will be
 rendered.
 
 @skip PrimitivesExample::PrimitivesExample
-@until Renderer::enable(Renderer::Feature::FaceCulling
+@until GL::Renderer::enable(GL::Renderer::Feature::FaceCulling
 
-We now use the pre-made @ref Primitives::Cube "cube primitive" and create a
-mesh from it. The mesh is indexed and contains position and normal data. As
-said earlier, interleaving the data gives us best memory access performance. We
-can do it by hand as in the previous example, but using @ref MeshTools::interleave()
-is much more convenient. We upload the interleaved data directly to vertex
-buffer.
+We now use the pre-made @ref Primitives::cubeSolid() "cube primitive" and
+create a mesh from it. The mesh is indexed and contains position and normal
+data. As said earlier, interleaving the data gives us best memory access
+performance. We can do it by hand as in the previous example, but using
+@ref MeshTools::interleave() is much more convenient. We upload the interleaved
+data directly to vertex buffer.
 
 @skip Trade::MeshData3D
 @until _vertexBuffer.setData(
@@ -108,7 +108,18 @@ data are used.
 @skip _mesh.setPrimitive
 @until .setIndexBuffer
 
-We now specify the initial transformation, color and projection. See
+@m_class{m-block m-success}
+
+@par Using other primitives
+    Please note that the above isn't a one-size-fits-all recipe. Other
+    primitives may not be indexed, some (such as wireframe primitives) may not
+    contain normals and may be suited for use with different shaders. Covering
+    all differences is out of the scope of this tutorial, see documentation of
+    particular primitives in the @ref Primitives namespace, the @ref MeshTools
+    functions, the @ref Shaders namespace and the @ref GL::Mesh class for the
+    full picture.
+
+We now specify the initial transformation, projection and color. See
 @ref matrix-vector and @ref transformations for more thorough introduction to
 transformations.
 

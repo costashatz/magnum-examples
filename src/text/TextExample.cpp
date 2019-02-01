@@ -3,7 +3,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -27,20 +27,17 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <iomanip>
-#include <sstream>
+#include <Corrade/Utility/Format.h>
 #include <Corrade/PluginManager/Manager.h>
-#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Renderer.h>
 #include <Magnum/Math/Complex.h>
-#include <Magnum/DefaultFramebuffer.h>
-#include <Magnum/Mesh.h>
-#include <Magnum/Renderer.h>
+#include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Shaders/DistanceFieldVector.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/DistanceFieldGlyphCache.h>
 #include <Magnum/Text/Renderer.h>
-
-#include "configure.h"
 
 namespace Magnum { namespace Examples {
 
@@ -51,26 +48,26 @@ class TextExample: public Platform::Application {
         explicit TextExample(const Arguments& arguments);
 
     private:
-        void viewportEvent(const Vector2i& size) override;
+        void viewportEvent(ViewportEvent& event) override;
         void drawEvent() override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
         void updateText();
 
         PluginManager::Manager<Text::AbstractFont> _manager;
-        std::unique_ptr<Text::AbstractFont> _font;
+        Containers::Pointer<Text::AbstractFont> _font;
 
         Text::DistanceFieldGlyphCache _cache;
-        Mesh _text;
-        Buffer _vertices, _indices;
-        std::unique_ptr<Text::Renderer2D> _text2;
+        GL::Mesh _text;
+        GL::Buffer _vertices, _indices;
+        Containers::Pointer<Text::Renderer2D> _text2;
         Shaders::DistanceFieldVector2D _shader;
 
         Matrix3 _transformation;
         Matrix3 _projection;
 };
 
-TextExample::TextExample(const Arguments& arguments): Platform::Application(arguments, Configuration().setTitle("Magnum Text Example")), _manager(MAGNUM_PLUGINS_FONT_DIR), _cache(Vector2i(2048), Vector2i(512), 22), _text{NoCreate} {
+TextExample::TextExample(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum Text Example")}, _cache(Vector2i(2048), Vector2i(512), 22), _text{NoCreate} {
     /* Load FreeTypeFont plugin */
     _font = _manager.loadAndInstantiate("FreeTypeFont");
     if(!_font) std::exit(1);
@@ -89,30 +86,30 @@ TextExample::TextExample(const Arguments& arguments): Platform::Application(argu
         "Здравствуй, мир!\n"
         "Γεια σου κόσμε!\n"
         "Hej Världen!",
-        _vertices, _indices, BufferUsage::StaticDraw, Text::Alignment::MiddleCenter);
+        _vertices, _indices, GL::BufferUsage::StaticDraw, Text::Alignment::MiddleCenter);
 
     _text2.reset(new Text::Renderer2D(*_font, _cache, 0.035f, Text::Alignment::TopRight));
-    _text2->reserve(40, BufferUsage::DynamicDraw, BufferUsage::StaticDraw);
+    _text2->reserve(40, GL::BufferUsage::DynamicDraw, GL::BufferUsage::StaticDraw);
 
-    Renderer::enable(Renderer::Feature::Blending);
-    Renderer::setBlendFunction(Renderer::BlendFunction::SourceAlpha, Renderer::BlendFunction::OneMinusSourceAlpha);
-    Renderer::setBlendEquation(Renderer::BlendEquation::Add, Renderer::BlendEquation::Add);
+    GL::Renderer::enable(GL::Renderer::Feature::Blending);
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
 
     _transformation = Matrix3::rotation(Deg(-10.0f));
-    _projection = Matrix3::scaling(Vector2::yScale(Vector2(defaultFramebuffer.viewport().size()).aspectRatio()));
+    _projection = Matrix3::scaling(Vector2::yScale(Vector2(GL::defaultFramebuffer.viewport().size()).aspectRatio()));
     updateText();
 }
 
-void TextExample::viewportEvent(const Vector2i& size) {
-    defaultFramebuffer.setViewport({{}, size});
+void TextExample::viewportEvent(ViewportEvent& event) {
+    GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
 
-    _projection = Matrix3::scaling(Vector2::yScale(Vector2(size).aspectRatio()));
+    _projection = Matrix3::scaling(Vector2::yScale(Vector2(event.windowSize()).aspectRatio()));
 }
 
 void TextExample::drawEvent() {
-    defaultFramebuffer.clear(FramebufferClear::Color);
+    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
-    _shader.setVectorTexture(_cache.texture());
+    _shader.bindVectorTexture(_cache.texture());
 
     _shader.setTransformationProjectionMatrix(_projection * _transformation)
         .setColor(Color3::fromHsv(216.0_degf, 0.85f, 1.0f))
@@ -146,13 +143,9 @@ void TextExample::mouseScrollEvent(MouseScrollEvent& event) {
 }
 
 void TextExample::updateText() {
-    std::ostringstream out;
-    out << std::setprecision(2)
-        << "Rotation: "
-        << Float(Deg(Complex::fromMatrix(_transformation.rotation()).angle()))
-        << "°\nScale: "
-        << _transformation.uniformScaling();
-    _text2->render(out.str());
+    _text2->render(Utility::formatString("Rotation: {:.2}°\nScale: {:.2}",
+        Float(Deg(Complex::fromMatrix(_transformation.rotation()).angle())),
+        _transformation.uniformScaling()));
 }
 
 }}

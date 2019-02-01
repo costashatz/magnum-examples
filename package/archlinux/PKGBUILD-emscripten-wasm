@@ -4,7 +4,7 @@ pkgver=dev.wasm
 pkgrel=1
 pkgdesc="Examples for Magnum OpenGL graphics engine (Emscripten, wasm)"
 arch=('any')
-url="http://magnum.graphics"
+url="https://magnum.graphics"
 license=('MIT')
 depends=('emscripten-magnum=dev.wasm')
 makedepends=('cmake' 'emscripten' 'corrade' 'ninja')
@@ -19,7 +19,6 @@ build() {
 
         cmake .. \
             -DCMAKE_TOOLCHAIN_FILE="$_rootdir/toolchains/generic/Emscripten-wasm.cmake" \
-            -DCMAKE_PREFIX_PATH=/usr/lib/emscripten/system \
             -G Ninja
     fi
 
@@ -30,9 +29,12 @@ build() {
         -DMAGNUM_DEPLOY_PREFIX=/srv/http/emscripten \
         -DWITH_AREALIGHTS_EXAMPLE=OFF \
         -DWITH_AUDIO_EXAMPLE=OFF \
+        -DWITH_BOX2D_EXAMPLE=OFF \
         -DWITH_BULLET_EXAMPLE=OFF \
         -DWITH_CUBEMAP_EXAMPLE=OFF \
+        -DWITH_IMGUI_EXAMPLE=OFF \
         -DWITH_MOTIONBLUR_EXAMPLE=OFF \
+        -DWITH_MOUSEINTERACTION_EXAMPLE=OFF \
         -DWITH_PRIMITIVES_EXAMPLE=OFF \
         -DWITH_PICKING_EXAMPLE=OFF \
         -DWITH_SHADOWS_EXAMPLE=OFF \
@@ -40,6 +42,7 @@ build() {
         -DWITH_TEXTUREDTRIANGLE_EXAMPLE=OFF \
         -DWITH_TRIANGLE_EXAMPLE=OFF \
         -DWITH_TRIANGLE_PLAIN_GLFW_EXAMPLE=OFF \
+        -DWITH_TRIANGLE_SOKOL_EXAMPLE=OFF \
         -DWITH_VIEWER_EXAMPLE=OFF \
         -DWITH_WEBVR_EXAMPLE=ON
     ninja

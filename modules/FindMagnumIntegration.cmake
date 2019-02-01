@@ -15,6 +15,8 @@
 #
 #  Bullet                       - Bullet Physics integration library
 #  Dart                         - Dart Physics integration library
+#  Glm                          - GLM integration library
+#  ImGui                        - ImGui integration library
 #  Ovr                          - Oculus SDK integration library
 #
 # Example usage with specifying additional components is:
@@ -40,19 +42,11 @@
 #  MAGNUMINTEGRATION_*_LIBRARY_RELEASE - Release version of given library, if
 #   found
 #
-# Workflows without imported targets are deprecated and the following variables
-# are included just for backwards compatibility and only if
-# :variable:`MAGNUM_BUILD_DEPRECATED` is enabled:
-#
-#  MAGNUM_*INTEGRATION_LIBRARIES - Expands to ``MagnumIntegration::*` target.
-#   Use ``MagnumIntegration::*` target directly instead.
-#
-#
 
 #
 #   This file is part of Magnum.
 #
-#   Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
+#   Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019
 #             Vladimír Vondruš <mosra@centrum.cz>
 #   Copyright © 2018 Konstantinos Chatzilygeroudis <costashatz@gmail.com>
 #
@@ -78,39 +72,46 @@
 # Magnum library dependencies
 set(_MAGNUMINTEGRATION_DEPENDENCIES )
 foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
-    string(TOUPPER ${_component} _COMPONENT)
-
     if(_component STREQUAL Bullet)
-        set(_MAGNUMINTEGRATION_${_COMPONENT}_MAGNUM_DEPENDENCIES SceneGraph Shapes)
-    endif()
-    if(_component STREQUAL Dart)
-        set(_MAGNUMINTEGRATION_${_COMPONENT}_MAGNUM_DEPENDENCIES SceneGraph Primitives MeshTools)
+        set(_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES SceneGraph Shaders GL)
+        set(_MAGNUMINTEGRATION_${_component}_MAGNUM_OPTIONAL_DEPENDENCIES Shapes)
+    elseif(_component STREQUAL Dart)
+        set(_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES SceneGraph Primitives MeshTools GL)
+    elseif(_component STREQUAL ImGui)
+        set(_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES GL)
     endif()
 
-    list(APPEND _MAGNUMINTEGRATION_DEPENDENCIES ${_MAGNUMINTEGRATION_${_COMPONENT}_MAGNUM_DEPENDENCIES})
+    list(APPEND _MAGNUMINTEGRATION_DEPENDENCIES ${_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES})
+    list(APPEND _MAGNUMINTEGRATION_OPTIONAL_DEPENDENCIES ${_MAGNUMINTEGRATION_${_component}_MAGNUM_OPTIONAL_DEPENDENCIES})
 endforeach()
 find_package(Magnum REQUIRED ${_MAGNUMINTEGRATION_DEPENDENCIES})
+if(_MAGNUMINTEGRATION_OPTIONAL_DEPENDENCIES)
+    find_package(Magnum OPTIONAL_COMPONENTS ${_MAGNUMINTEGRATION_OPTIONAL_DEPENDENCIES})
+endif()
 
 # Global integration include dir
 find_path(MAGNUMINTEGRATION_INCLUDE_DIR Magnum
     HINTS ${MAGNUM_INCLUDE_DIR})
 mark_as_advanced(MAGNUMINTEGRATION_INCLUDE_DIR)
 
+# Component distinction (listing them explicitly to avoid mistakes with finding
+# components from other repositories)
+set(_MAGNUMINTEGRATION_LIBRARY_COMPONENT_LIST Bullet Dart ImGui Glm Ovr)
+
+# Inter-component dependencies (none yet)
+# set(_MAGNUMINTEGRATION_Component_DEPENDENCIES Dependency)
+
 # Ensure that all inter-component dependencies are specified as well
 set(_MAGNUMINTEGRATION_ADDITIONAL_COMPONENTS )
 foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
-    string(TOUPPER ${_component} _COMPONENT)
-
-    # (no inter-component dependencies yet)
-
     # Mark the dependencies as required if the component is also required
     if(MagnumIntegration_FIND_REQUIRED_${_component})
-        foreach(_dependency ${_MAGNUMINTEGRATION_${_COMPONENT}_DEPENDENCIES})
+        foreach(_dependency ${_MAGNUMINTEGRATION_${_component}_DEPENDENCIES})
             set(MagnumIntegration_FIND_REQUIRED_${_dependency} TRUE)
         endforeach()
     endif()
 
-    list(APPEND _MAGNUMINTEGRATION_ADDITIONAL_COMPONENTS ${_MAGNUMINTEGRATION_${_COMPONENT}_DEPENDENCIES})
+    list(APPEND _MAGNUMINTEGRATION_ADDITIONAL_COMPONENTS ${_MAGNUMINTEGRATION_${_component}_DEPENDENCIES})
 endforeach()
 
 # Join the lists, remove duplicate components
@@ -121,11 +122,14 @@ if(MagnumIntegration_FIND_COMPONENTS)
     list(REMOVE_DUPLICATES MagnumIntegration_FIND_COMPONENTS)
 endif()
 
-# Component distinction (listing them explicitly to avoid mistakes with finding
-# components from other repositories)
-set(_MAGNUMINTEGRATION_LIBRARY_COMPONENTS "^(Bullet|Dart|Ovr)$")
+# Convert components lists to regular expressions so I can use if(MATCHES).
+# TODO: Drop this once CMake 3.3 and if(IN_LIST) can be used
+foreach(_WHAT LIBRARY)
+    string(REPLACE ";" "|" _MAGNUMINTEGRATION_${_WHAT}_COMPONENTS "${_MAGNUMINTEGRATION_${_WHAT}_COMPONENT_LIST}")
+    set(_MAGNUMINTEGRATION_${_WHAT}_COMPONENTS "^(${_MAGNUMINTEGRATION_${_WHAT}_COMPONENTS})$")
+endforeach()
 
-# Additional components
+# Find all components
 foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
     string(TOUPPER ${_component} _COMPONENT)
 
@@ -180,6 +184,22 @@ foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
 
             set(_MAGNUMINTEGRATION_${_COMPONENT}_INCLUDE_PATH_NAMES MotionState.h)
 
+        # ImGui integration library
+        elseif(_component STREQUAL ImGui)
+            find_package(ImGui)
+            set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES ImGui::ImGui)
+
+            set(_MAGNUMINTEGRATION_${_COMPONENT}_INCLUDE_PATH_NAMES Integration.h)
+
+        # GLM integration library
+        elseif(_component STREQUAL Glm)
+            find_package(GLM)
+            set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES GLM::GLM)
+
+            set(_MAGNUMINTEGRATION_${_COMPONENT}_INCLUDE_PATH_NAMES Integration.h)
+
         # Dart integration library
         elseif(_component STREQUAL Dart)
             find_package(DART 6.0.0 CONFIG REQUIRED)
@@ -194,9 +214,7 @@ foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
         elseif(_component STREQUAL Ovr)
             find_package(OVR)
             set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
-                INTERFACE_INCLUDE_DIRECTORIES ${OVR_INCLUDE_DIR})
-            set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
-                INTERFACE_LINK_LIBRARIES ${OVR_LIBRARY})
+                INTERFACE_LINK_LIBRARIES OVR::OVR)
 
             set(_MAGNUMINTEGRATION_${_COMPONENT}_INCLUDE_PATH_NAMES OvrIntegration.h)
         endif()
@@ -209,16 +227,23 @@ foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
         endif()
 
         if(_component MATCHES ${_MAGNUMINTEGRATION_LIBRARY_COMPONENTS})
-            # Link to core Magnum library, add other Magnum dependencies
+            # Link to core Magnum library, add other Magnum required and
+            # optional dependencies
             set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
                 INTERFACE_LINK_LIBRARIES Magnum::Magnum)
-            foreach(_dependency ${_MAGNUMINTEGRATION_${_COMPONENT}_MAGNUM_DEPENDENCIES})
+            foreach(_dependency ${_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES})
                 set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
                     INTERFACE_LINK_LIBRARIES Magnum::${_dependency})
             endforeach()
+            foreach(_dependency ${_MAGNUMINTEGRATION_${_component}_MAGNUM_OPTIONAL_DEPENDENCIES})
+                if(Magnum_${_dependency}_FOUND)
+                    set_property(TARGET MagnumIntegration::${_component} APPEND     PROPERTY
+                        INTERFACE_LINK_LIBRARIES Magnum::${_dependency})
+                endif()
+            endforeach()
 
             # Add inter-project dependencies
-            foreach(_dependency ${_MAGNUMINTEGRATION_${_COMPONENT}_DEPENDENCIES})
+            foreach(_dependency ${_MAGNUMINTEGRATION_${_component}_DEPENDENCIES})
                 set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
                     INTERFACE_LINK_LIBRARIES MagnumIntegration::${_dependency})
             endforeach()
@@ -230,11 +255,6 @@ foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
         else()
             set(MagnumIntegration_${_component}_FOUND FALSE)
         endif()
-    endif()
-
-    # Deprecated variables
-    if(MAGNUM_BUILD_DEPRECATED AND _component MATCHES ${_MAGNUMINTEGRATION_LIBRARY_COMPONENTS})
-        set(MAGNUM_${_COMPONENT}INTEGRATION_LIBRARIES MagnumIntegration::${_component})
     endif()
 endforeach()
 

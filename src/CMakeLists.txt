@@ -3,7 +3,7 @@
 #
 #   Original authors — credit is appreciated but not required:
 #
-#       2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+#       2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
 #           Vladimír Vondruš <mosra@centrum.cz>
 #
 #   This is free and unencumbered software released into the public domain.
@@ -46,20 +46,36 @@ if(WITH_AUDIO_EXAMPLE)
     add_subdirectory(audio)
 endif()
 
-if(WITH_BULLET_EXAMPLE)
-    add_subdirectory(bullet)
+if(WITH_BOX2D_EXAMPLE)
+    add_subdirectory(box2d)
 endif()
 
-if(WITH_CUBEMAP_EXAMPLE)
-    add_subdirectory(cubemap)
+if(WITH_BULLET_EXAMPLE)
+    add_subdirectory(bullet)
 endif()
 
 if(WITH_DART_EXAMPLE)
     add_subdirectory(dart)
 endif()
 
+if(WITH_CUBEMAP_EXAMPLE)
+    add_subdirectory(cubemap)
+endif()
+
+if(WITH_IMGUI_EXAMPLE)
+    add_subdirectory(imgui)
+endif()
+
+if(WITH_LEAPMOTION_EXAMPLE)
+    add_subdirectory(leapmotion)
+endif()
+
 if(WITH_MOTIONBLUR_EXAMPLE)
     add_subdirectory(motionblur)
+endif()
+
+if(WITH_MOUSEINTERACTION_EXAMPLE)
+    add_subdirectory(mouseinteraction)
 endif()
 
 if(WITH_OVR_EXAMPLE)
@@ -92,6 +108,14 @@ endif()
 
 if(WITH_TRIANGLE_PLAIN_GLFW_EXAMPLE)
     add_subdirectory(triangle-plain-glfw)
+endif()
+
+if(WITH_TRIANGLE_SOKOL_EXAMPLE)
+    add_subdirectory(triangle-sokol)
+endif()
+
+if(WITH_TRIANGLE_VULKAN_EXAMPLE)
+    add_subdirectory(triangle-vulkan)
 endif()
 
 if(WITH_VIEWER_EXAMPLE)

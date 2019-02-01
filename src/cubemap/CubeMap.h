@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -44,10 +44,10 @@ class CubeMap: public Object3D, SceneGraph::Drawable3D {
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
     private:
-        Resource<Buffer> _buffer;
-        Resource<Mesh> _cube;
-        Resource<AbstractShaderProgram, CubeMapShader> _shader;
-        Resource<CubeMapTexture> _texture;
+        Resource<GL::Buffer> _buffer;
+        Resource<GL::Mesh> _cube;
+        Resource<GL::AbstractShaderProgram, CubeMapShader> _shader;
+        Resource<GL::CubeMapTexture> _texture;
 };
 
 }}

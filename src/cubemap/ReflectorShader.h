@@ -5,7 +5,7 @@
 
     Original authors — credit is appreciated but not required:
 
-        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 —
+        2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 —
             Vladimír Vondruš <mosra@centrum.cz>
 
     This is free and unencumbered software released into the public domain.
@@ -29,17 +29,17 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <Magnum/GL/AbstractShaderProgram.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Matrix4.h>
-#include <Magnum/AbstractShaderProgram.h>
 
 namespace Magnum { namespace Examples {
 
-class ReflectorShader: public AbstractShaderProgram {
+class ReflectorShader: public GL::AbstractShaderProgram {
     public:
-        typedef Attribute<0, Vector3> Position;
-        typedef Attribute<1, Vector2> TextureCoords;
+        typedef GL::Attribute<0, Vector3> Position;
+        typedef GL::Attribute<1, Vector2> TextureCoords;
 
         explicit ReflectorShader();
 
@@ -73,9 +73,9 @@ class ReflectorShader: public AbstractShaderProgram {
             return *this;
         }
 
-        ReflectorShader& setTexture(CubeMapTexture& texture);
+        ReflectorShader& setTexture(GL::CubeMapTexture& texture);
 
-        ReflectorShader& setTarnishTexture(Texture2D& texture);
+        ReflectorShader& setTarnishTexture(GL::Texture2D& texture);
 
     private:
         Int _transformationMatrixUniform,
