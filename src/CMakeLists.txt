@@ -54,6 +54,10 @@ if(WITH_BULLET_EXAMPLE)
     add_subdirectory(bullet)
 endif()
 
+if(WITH_DART_EXAMPLE)
+    add_subdirectory(dart)
+endif()
+
 if(WITH_CUBEMAP_EXAMPLE)
     add_subdirectory(cubemap)
 endif()

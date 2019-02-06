@@ -44,6 +44,7 @@ option(WITH_AREALIGHTS_EXAMPLE "Build Area Lights example (requires the Ui libra
 option(WITH_AUDIO_EXAMPLE "Build Audio example (requires the Audio library and the StbVorbisAudioImporter plugin)" OFF)
 option(WITH_BOX2D_EXAMPLE "Build Box2D integration example" OFF)
 option(WITH_BULLET_EXAMPLE "Build Bullet integration example (requires the BulletIntegration library)" OFF)
+option(WITH_DART_EXAMPLE "Build DART integration example (requires the DartIntegration library)" OFF)
 cmake_dependent_option(WITH_CUBEMAP_EXAMPLE "Build CubeMap example (requires some JPEG importer plugin)" OFF "NOT MAGNUM_TARGET_GLES" OFF)
 option(WITH_IMGUI_EXAMPLE "Build ImGui example" OFF)
 option(WITH_LEAPMOTION_EXAMPLE "Build LeapMotion example" OFF)
