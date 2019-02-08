@@ -391,7 +391,11 @@ dart::dynamics::SkeletonPtr DartExample::createNewDomino(Eigen::Vector6d positio
 {
     const double default_distance = default_domino_height / 2.0;
     /* Create a new domino */
+#if DART_VERSION_AT_LEAST(6, 7, 2)
     dart::dynamics::SkeletonPtr newDomino = _dominoSkel->cloneSkeleton();
+#else
+    dart::dynamics::SkeletonPtr newDomino = _dominoSkel->clone();
+#endif
     newDomino->setName("domino #" + std::to_string(_dominoId++));
 
     /* Compute the position for the new domino */
