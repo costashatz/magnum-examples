@@ -37,6 +37,22 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/../../modules/")
 endif()
 
+if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
+    set(DARTEXAMPLE_DIR ".")
+else()
+    set(DARTEXAMPLE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+endif()
+
+# We need the URDF loader of DART for this example
+find_package(DART 6.0.0 CONFIG REQUIRED OPTIONAL_COMPONENTS io-urdf utils-urdf)
+
+if(NOT (DART_utils-urdf_FOUND OR DART_io-urdf_FOUND) OR (DART_VERSION STRLESS 6.0.0))
+    message(FATAL_ERROR "DART version >= 6 and DART urdf library are required for this example!")
+endif()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
+
 find_package(Magnum REQUIRED
     GL
     MeshTools
@@ -50,15 +66,16 @@ find_package(MagnumIntegration REQUIRED Dart)
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
 add_executable(magnum-dart DartExample.cpp)
-target_compile_options(magnum-dart PUBLIC -march=native -faligned-new)# -fsanitize=address)
+target_include_directories(magnum-dart PUBLIC ${DART_INCLUDE_DIRS} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+# target_compile_options(magnum-dart PUBLIC -march=native -faligned-new)
 target_link_libraries(magnum-dart PRIVATE
-    # asan
     Magnum::Application
     Magnum::MeshTools
     Magnum::Magnum
     Magnum::SceneGraph
     Magnum::Primitives
     Magnum::Shaders
-    MagnumIntegration::Dart)
+    MagnumIntegration::Dart
+    ${DART_LIBRARIES})
 
 install(TARGETS magnum-dart DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
