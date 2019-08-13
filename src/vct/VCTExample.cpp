@@ -53,6 +53,7 @@
 #include <Magnum/Shaders/Generic.h>
 #include <Magnum/Shaders/Flat.h>
 
+#include "ClearVoxelsShader.h"
 #include "VoxelizationShader.h"
 #include "VoxelVisualizationShader.h"
 
@@ -107,7 +108,6 @@ class VCTExample: public Platform::Application {
     private:
         void drawEvent() override;
         void initTextures();
-        void clearTextures();
 
         Scene3D _scene;
         Object3D* _cameraObject;
@@ -117,6 +117,7 @@ class VCTExample: public Platform::Application {
         GL::Mesh _sphere, _debugVoxelsMesh;
         VoxelizationShader _voxelizationShader;
         VoxelVisualizationShader _voxelVisualizationShader;
+        ClearVoxelsShader _clearVoxelsShader;
         Shaders::Flat3D _flatShader;
         Int _volumeDimension = 128;
         Float _volumeGridSize = 1.f;
@@ -135,7 +136,6 @@ VCTExample::VCTExample(const Arguments& arguments):
     Containers::Array<char> data(Containers::ValueInit, _volumeDimension * _volumeDimension * _volumeDimension * 4);
     _zeroImage = std::unique_ptr<Image3D>(new Image3D{PixelFormat::RGBA8UI, {_volumeDimension, _volumeDimension, _volumeDimension}, std::move(data)});
     initTextures();
-    // clearTextures();
 
     _sphere = MeshTools::compile(Primitives::uvSphereSolid(16, 32)); // MeshTools::compile(Primitives::icosphereSolid(4));
     // _sphere = MeshTools::compile(Primitives::cubeSolid());
@@ -205,7 +205,12 @@ void VCTExample::drawEvent() {
     GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
     GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
 
-    clearTextures();
+    _clearVoxelsShader.bindAlbedoTexture(_albedoTexture)
+        .bindNormalTexture(_normalTexture)
+        .bindEmissionTexture(_emissionTexture);
+    UnsignedInt sz = std::ceil(_volumeDimension / 8.f);
+    _clearVoxelsShader.dispatchCompute({sz, sz, sz});
+    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
     // Utility::Debug{} << _albedoTexture.imageSize(0) << _zeroImage->size();
     // Utility::Debug{} << Utility::Debug::packed << Utility::Debug::color << _albedoTexture.image(0, {PixelFormat::RGBA8UI}).pixels();
     // Utility::Debug{} << "--------------------";
@@ -281,13 +286,6 @@ void VCTExample::initTextures() {
                 .setSubImage(0, {}, *_zeroImage)
                 .generateMipmap();
 }
-
-void VCTExample::clearTextures() {
-    _albedoTexture.setSubImage(0, {}, *_zeroImage).generateMipmap();
-    _normalTexture.setSubImage(0, {}, *_zeroImage).generateMipmap();
-    _emissionTexture.setSubImage(0, {}, *_zeroImage).generateMipmap();
-}
-
 }}
 
 MAGNUM_APPLICATION_MAIN(Magnum::Examples::VCTExample)
