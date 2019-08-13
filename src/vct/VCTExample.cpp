@@ -119,7 +119,7 @@ class VCTExample: public Platform::Application {
         VoxelVisualizationShader _voxelVisualizationShader;
         Shaders::Flat3D _flatShader;
         Int _volumeDimension = 128;
-        Float _volumeGridSize = 2.5f;
+        Float _volumeGridSize = 1.f;
         Float _voxelSize = _volumeGridSize / static_cast<Float>(_volumeDimension);
         Float _voxelScale = 1.f / _volumeGridSize;
         Vector3 _minPoint = {-_volumeGridSize / 2.f, -_volumeGridSize / 2.f, -_volumeGridSize / 2.f};
@@ -137,8 +137,8 @@ VCTExample::VCTExample(const Arguments& arguments):
     initTextures();
     // clearTextures();
 
-    // _sphere = MeshTools::compile(Primitives::icosphereSolid(4));//MeshTools::compile(Primitives::uvSphereSolid(16, 32));
-    _sphere = MeshTools::compile(Primitives::cubeSolid());
+    _sphere = MeshTools::compile(Primitives::uvSphereSolid(16, 32)); // MeshTools::compile(Primitives::icosphereSolid(4));
+    // _sphere = MeshTools::compile(Primitives::cubeSolid());
 
     /* create debug mesh for drawing voxels */
     _debugVoxelsMesh.setPrimitive(GL::MeshPrimitive::Points)
@@ -166,12 +166,12 @@ VCTExample::VCTExample(const Arguments& arguments):
 
     Color4 red = {1.f, 0.f, 0.f, 1.f};
     (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 0.f});
-    (new ColoredObject(red, _sphere, _flatShader, _scene, _colored));
+    (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.f});
 
     /* Configure camera */
     _cameraObject = new Object3D{&_scene};
     // _cameraObject->translate(Vector3::zAxis(4.f));
-    _cameraObject->setTransformation(Matrix4::lookAt({2.f, 2.f, -6.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
+    _cameraObject->setTransformation(Matrix4::lookAt({2.f, 1.f, 1.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
     _camera = new SceneGraph::Camera3D{*_cameraObject};
     _camera->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(45.0_degf, 4.0f/3.0f, 0.001f, 100.0f))
@@ -206,6 +206,12 @@ void VCTExample::drawEvent() {
     GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
 
     clearTextures();
+    // Utility::Debug{} << _albedoTexture.imageSize(0) << _zeroImage->size();
+    // Utility::Debug{} << Utility::Debug::packed << Utility::Debug::color << _albedoTexture.image(0, {PixelFormat::RGBA8UI}).pixels();
+    // Utility::Debug{} << "--------------------";
+    // Utility::Debug{} << Utility::Debug::packed << Utility::Debug::color << _zeroImage->pixels();
+    // Utility::Debug{} << "--------------------";
+    // Utility::Debug{} << "--------------------";
     // Utility::Debug{} << _voxelSize << _voxelScale;
     _voxelizationShader.setVolumeDimension(_volumeDimension)
         .setViewProjections(_projectionMatrices)
@@ -240,7 +246,7 @@ void VCTExample::drawEvent() {
 
     _voxelVisualizationShader.setVolumeDimension(_volumeDimension)
         .setTransformationMatrix(transformationMatrix)
-        .bindVoxelTexture(_albedoTexture);
+        .bindVoxelTexture(_normalTexture); // _albedoTexture
     
     _debugVoxelsMesh.draw(_voxelVisualizationShader);
 
@@ -277,9 +283,9 @@ void VCTExample::initTextures() {
 }
 
 void VCTExample::clearTextures() {
-    _albedoTexture.setSubImage(0, {}, *_zeroImage.get()).generateMipmap();
-    _normalTexture.setSubImage(0, {}, *_zeroImage.get()).generateMipmap();
-    _emissionTexture.setSubImage(0, {}, *_zeroImage.get()).generateMipmap();
+    _albedoTexture.setSubImage(0, {}, *_zeroImage).generateMipmap();
+    _normalTexture.setSubImage(0, {}, *_zeroImage).generateMipmap();
+    _emissionTexture.setSubImage(0, {}, *_zeroImage).generateMipmap();
 }
 
 }}
