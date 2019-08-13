@@ -118,6 +118,10 @@ if(WITH_TRIANGLE_VULKAN_EXAMPLE)
     add_subdirectory(triangle-vulkan)
 endif()
 
+if(WITH_VCT_EXAMPLE)
+    add_subdirectory(vct)
+endif()
+
 if(WITH_VIEWER_EXAMPLE)
     add_subdirectory(viewer)
 endif()
