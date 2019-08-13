@@ -114,31 +114,28 @@ class VCTExample: public Platform::Application {
         SceneGraph::Camera3D* _camera;
         SceneGraph::DrawableGroup3D _voxelized, _colored;
 
-        GL::Mesh _sphere, _debugVoxelsMesh;
+        GL::Mesh _sphere, _cube, _debugVoxelsMesh;
         VoxelizationShader _voxelizationShader;
         VoxelVisualizationShader _voxelVisualizationShader;
         ClearVoxelsShader _clearVoxelsShader;
         Shaders::Flat3D _flatShader;
         Int _volumeDimension = 128;
-        Float _volumeGridSize = 1.f;
+        Float _volumeGridSize = 1.5f;
         Float _voxelSize = _volumeGridSize / static_cast<Float>(_volumeDimension);
         Float _voxelScale = 1.f / _volumeGridSize;
         Vector3 _minPoint = {-_volumeGridSize / 2.f, -_volumeGridSize / 2.f, -_volumeGridSize / 2.f};
         GL::Texture3D _albedoTexture, _normalTexture, _emissionTexture;
         Timeline _timeline;
-        std::unique_ptr<Image3D> _zeroImage;
         std::vector<Matrix4> _projectionMatrices, _projectionIMatrices;
 };
 
 VCTExample::VCTExample(const Arguments& arguments):
     Platform::Application{arguments, Configuration{}.setTitle("Magnum Voxel Cone Tracing Example")}
 {
-    Containers::Array<char> data(Containers::ValueInit, _volumeDimension * _volumeDimension * _volumeDimension * 4);
-    _zeroImage = std::unique_ptr<Image3D>(new Image3D{PixelFormat::RGBA8UI, {_volumeDimension, _volumeDimension, _volumeDimension}, std::move(data)});
     initTextures();
 
     _sphere = MeshTools::compile(Primitives::uvSphereSolid(16, 32)); // MeshTools::compile(Primitives::icosphereSolid(4));
-    // _sphere = MeshTools::compile(Primitives::cubeSolid());
+    _cube = MeshTools::compile(Primitives::cubeSolid());
 
     /* create debug mesh for drawing voxels */
     _debugVoxelsMesh.setPrimitive(GL::MeshPrimitive::Points)
@@ -165,8 +162,10 @@ VCTExample::VCTExample(const Arguments& arguments):
     }
 
     Color4 red = {1.f, 0.f, 0.f, 1.f};
-    (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 0.f});
-    (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.f});
+    (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 1.f});
+    Color4 green = {0.f, 1.f, 0.f, 1.f};
+    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-2.2f, 0.f, -2.f});
+    // (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.f});
 
     /* Configure camera */
     _cameraObject = new Object3D{&_scene};
@@ -265,25 +264,28 @@ void VCTExample::drawEvent() {
 }
 
 void VCTExample::initTextures() {
+    Containers::Array<char> data(Containers::ValueInit, _volumeDimension * _volumeDimension * _volumeDimension * 4);
+    Image3D zeroImage{PixelFormat::RGBA8UI, {_volumeDimension, _volumeDimension, _volumeDimension}, std::move(data)};
+
     _albedoTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
                 .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
-                .setSubImage(0, {}, *_zeroImage)
+                .setSubImage(0, {}, zeroImage)
                 .generateMipmap();
     
     _normalTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
                 .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
-                .setSubImage(0, {}, *_zeroImage)
+                .setSubImage(0, {}, zeroImage)
                 .generateMipmap();
     
     _emissionTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
                 .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
-                .setSubImage(0, {}, *_zeroImage)
+                .setSubImage(0, {}, zeroImage)
                 .generateMipmap();
 }
 }}
