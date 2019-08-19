@@ -51,8 +51,13 @@ class ClearVoxelsShader: public GL::AbstractShaderProgram {
             return *this;
         }
 
+        ClearVoxelsShader& bindRadianceTexture(GL::Texture3D& radiance) {
+            radiance.bindImage(_radiancePos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            return *this;
+        }
+
     private:
-        Int _albedoPos = 0, _normalPos = 1, _emissionPos = 2;
+        Int _albedoPos = 0, _normalPos = 1, _emissionPos = 2, _radiancePos = 3;
 };
 }}
 

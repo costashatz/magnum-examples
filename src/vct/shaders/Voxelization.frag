@@ -16,9 +16,9 @@ layout(binding = 2, r32ui) uniform volatile coherent uimage3D voxelEmission;
 
 // layout(location = 4)
 // uniform uint volumeDimension;
-// layout(location = 7)
+layout(location = 11)
 uniform vec4 diffuseColor;
-// layout(location = 8)
+layout(location = 12)
 uniform vec3 emissiveColor;
 // layout(location = 9)
 // uniform uint flagStaticVoxels;

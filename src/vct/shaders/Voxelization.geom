@@ -3,16 +3,16 @@
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
 
-// layout(location = 2)
+layout(location = 5)
 uniform mat4 viewProjections[3];
-// layout(location = 3)
+layout(location = 8)
 uniform mat4 viewProjectionsI[3];
 
-// layout(location = 4)
+layout(location = 2)
 uniform uint volumeDimension;
-// layout(location = 5)
+layout(location = 3)
 uniform float voxelScale;
-// layout(location = 6)
+layout(location = 4)
 uniform vec3 worldMinPoint;
 
 in vec3 transformedNormal[];

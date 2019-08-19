@@ -1,8 +1,8 @@
 // #version 430
 
-// layout(location = 0)
+layout(location = 0)
 uniform mat4 transformationMatrix;
-// layout(location = 1)
+layout(location = 1)
 uniform mat3 normalMatrix;
 
 // TO-DO: Add textures

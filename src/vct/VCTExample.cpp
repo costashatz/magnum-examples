@@ -54,6 +54,7 @@
 #include <Magnum/Shaders/Flat.h>
 
 #include "ClearVoxelsShader.h"
+#include "InjectRadianceShader.h"
 #include "VoxelizationShader.h"
 #include "VoxelVisualizationShader.h"
 
@@ -118,6 +119,7 @@ class VCTExample: public Platform::Application {
         VoxelizationShader _voxelizationShader;
         VoxelVisualizationShader _voxelVisualizationShader;
         ClearVoxelsShader _clearVoxelsShader;
+        InjectRadianceShader _injectRadianceShader;
         Shaders::Flat3D _flatShader;
         Int _volumeDimension = 128;
         Float _volumeGridSize = 1.5f;
@@ -125,6 +127,7 @@ class VCTExample: public Platform::Application {
         Float _voxelScale = 1.f / _volumeGridSize;
         Vector3 _minPoint = {-_volumeGridSize / 2.f, -_volumeGridSize / 2.f, -_volumeGridSize / 2.f};
         GL::Texture3D _albedoTexture, _normalTexture, _emissionTexture;
+        GL::Texture3D _radianceTexture;
         Timeline _timeline;
         std::vector<Matrix4> _projectionMatrices, _projectionIMatrices;
 };
@@ -165,7 +168,8 @@ VCTExample::VCTExample(const Arguments& arguments):
     (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 1.f});
     Color4 green = {0.f, 1.f, 0.f, 1.f};
     (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-2.2f, 0.f, -2.f});
-    // (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.f});
+    // (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.2f});
+    // (new ColoredObject(green, _cube, _flatShader, _scene, _colored))->translate({-0.44f, 0.f, -0.4f});
 
     /* Configure camera */
     _cameraObject = new Object3D{&_scene};
@@ -206,7 +210,8 @@ void VCTExample::drawEvent() {
 
     _clearVoxelsShader.bindAlbedoTexture(_albedoTexture)
         .bindNormalTexture(_normalTexture)
-        .bindEmissionTexture(_emissionTexture);
+        .bindEmissionTexture(_emissionTexture)
+        .bindRadianceTexture(_radianceTexture);
     UnsignedInt sz = std::ceil(_volumeDimension / 8.f);
     _clearVoxelsShader.dispatchCompute({sz, sz, sz});
     GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
@@ -217,7 +222,7 @@ void VCTExample::drawEvent() {
     // Utility::Debug{} << "--------------------";
     // Utility::Debug{} << "--------------------";
     // Utility::Debug{} << _voxelSize << _voxelScale;
-    _voxelizationShader.setVolumeDimension(_volumeDimension)
+    _voxelizationShader.setVolumeDimension(static_cast<UnsignedInt>(_volumeDimension))
         .setViewProjections(_projectionMatrices)
         .setViewProjectionsI(_projectionIMatrices)
         .setVoxelScale(_voxelScale)
@@ -227,6 +232,20 @@ void VCTExample::drawEvent() {
         .bindEmissionTexture(_emissionTexture);
     _camera->draw(_voxelized);
 
+    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+
+    _injectRadianceShader.setVolumeDimension(_volumeDimension)
+        .setVoxelScale(_voxelScale)
+        .setVoxelSize(_voxelSize)
+        .setMinPoint(_minPoint)
+        .setTraceShadowHit(0.5f)
+        .bindAlbedoTexture(_albedoTexture)
+        .bindNormalTexture(_normalTexture)
+        .bindEmissionTexture(_emissionTexture)
+        .bindRadianceTexture(_radianceTexture)
+        .setLight();
+    sz = std::ceil(_volumeDimension / 8.f);
+    _injectRadianceShader.dispatchCompute({sz, sz, sz});
     GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
 
     /* restore renderer/framebuffer */
@@ -248,10 +267,10 @@ void VCTExample::drawEvent() {
 
     // Utility::Debug{} << transformationMatrix;
 
-    _voxelVisualizationShader.setVolumeDimension(_volumeDimension)
+    _voxelVisualizationShader.setVolumeDimension(static_cast<UnsignedInt>(_volumeDimension))
         .setTransformationMatrix(transformationMatrix)
-        .bindVoxelTexture(_normalTexture); // _albedoTexture
-    
+        .bindVoxelTexture(_radianceTexture); // _albedoTexture
+
     _debugVoxelsMesh.draw(_voxelVisualizationShader);
 
     // _camera->draw(_colored);
@@ -273,15 +292,22 @@ void VCTExample::initTextures() {
                 .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
                 .setSubImage(0, {}, zeroImage)
                 .generateMipmap();
-    
+
     _normalTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
                 .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
                 .setSubImage(0, {}, zeroImage)
                 .generateMipmap();
-    
+
     _emissionTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
+                .setMinificationFilter(GL::SamplerFilter::Linear)
+                .setWrapping(GL::SamplerWrapping::ClampToEdge)
+                .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
+                .setSubImage(0, {}, zeroImage)
+                .generateMipmap();
+
+    _radianceTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
                 .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})

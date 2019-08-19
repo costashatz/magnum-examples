@@ -5,6 +5,7 @@ out vec4 albedo;
 
 layout(binding = 0, rgba8) uniform readonly image3D voxel;
 
+layout(location=0)
 uniform uint volumeDimension;
 
 void main()
