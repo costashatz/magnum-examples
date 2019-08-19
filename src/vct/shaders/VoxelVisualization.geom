@@ -5,7 +5,7 @@ layout(points) in;
 // outputs voxels as cubes
 layout(triangle_strip, max_vertices = 24) out;
 
-layout(location=1)
+layout(location = 1)
 uniform mat4 transformationMatrix;
 
 // uniform vec4 frustumPlanes[6];

@@ -46,7 +46,7 @@ class InjectRadianceShader: public GL::AbstractShaderProgram {
 
         InjectRadianceShader& setLight() {
             /* Create default light for testing */
-            setUniform(_lightsUniform, Vector4(0.f, 0.75f, 0.f, 1.f));
+            setUniform(_lightsUniform, Vector4(0.4f, 1.f, 0.f, 1.f));
             setUniform(_lightsUniform + 1, Vector4(1.f, 1.f, 1.f, 1.f));
             setUniform(_lightsUniform + 2, Vector3(1.f, 0.f, 0.f));
             setUniform(_lightsUniform + 3, 1.f);

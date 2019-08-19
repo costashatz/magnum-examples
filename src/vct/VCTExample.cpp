@@ -55,6 +55,8 @@
 
 #include "ClearVoxelsShader.h"
 #include "InjectRadianceShader.h"
+#include "MipMapBaseShader.h"
+#include "MipMapVolumeShader.h"
 #include "VoxelizationShader.h"
 #include "VoxelVisualizationShader.h"
 
@@ -120,6 +122,8 @@ class VCTExample: public Platform::Application {
         VoxelVisualizationShader _voxelVisualizationShader;
         ClearVoxelsShader _clearVoxelsShader;
         InjectRadianceShader _injectRadianceShader;
+        MipMapBaseShader _mipMapBaseShader;
+        MipMapVolumeShader _mipMapVolumeShader;
         Shaders::Flat3D _flatShader;
         Int _volumeDimension = 128;
         Float _volumeGridSize = 1.5f;
@@ -127,7 +131,7 @@ class VCTExample: public Platform::Application {
         Float _voxelScale = 1.f / _volumeGridSize;
         Vector3 _minPoint = {-_volumeGridSize / 2.f, -_volumeGridSize / 2.f, -_volumeGridSize / 2.f};
         GL::Texture3D _albedoTexture, _normalTexture, _emissionTexture;
-        GL::Texture3D _radianceTexture;
+        GL::Texture3D _radianceTexture, _voxelTextures[6];
         Timeline _timeline;
         std::vector<Matrix4> _projectionMatrices, _projectionIMatrices;
 };
@@ -208,6 +212,7 @@ void VCTExample::drawEvent() {
     GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
     GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
 
+    /* Clear voxel information */
     _clearVoxelsShader.bindAlbedoTexture(_albedoTexture)
         .bindNormalTexture(_normalTexture)
         .bindEmissionTexture(_emissionTexture)
@@ -215,13 +220,8 @@ void VCTExample::drawEvent() {
     UnsignedInt sz = std::ceil(_volumeDimension / 8.f);
     _clearVoxelsShader.dispatchCompute({sz, sz, sz});
     GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
-    // Utility::Debug{} << _albedoTexture.imageSize(0) << _zeroImage->size();
-    // Utility::Debug{} << Utility::Debug::packed << Utility::Debug::color << _albedoTexture.image(0, {PixelFormat::RGBA8UI}).pixels();
-    // Utility::Debug{} << "--------------------";
-    // Utility::Debug{} << Utility::Debug::packed << Utility::Debug::color << _zeroImage->pixels();
-    // Utility::Debug{} << "--------------------";
-    // Utility::Debug{} << "--------------------";
-    // Utility::Debug{} << _voxelSize << _voxelScale;
+
+    /* Voxelize scene */
     _voxelizationShader.setVolumeDimension(static_cast<UnsignedInt>(_volumeDimension))
         .setViewProjections(_projectionMatrices)
         .setViewProjectionsI(_projectionIMatrices)
@@ -234,6 +234,7 @@ void VCTExample::drawEvent() {
 
     GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
 
+    /* Inject light information into voxelized texture */
     _injectRadianceShader.setVolumeDimension(_volumeDimension)
         .setVoxelScale(_voxelScale)
         .setVoxelSize(_voxelSize)
@@ -248,6 +249,30 @@ void VCTExample::drawEvent() {
     _injectRadianceShader.dispatchCompute({sz, sz, sz});
     GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
 
+    /* Generate MipMapBase */
+    UnsignedInt mipDimension = _volumeDimension / 2;
+    _mipMapBaseShader.setMipDimension(mipDimension)
+        .bindVoxelTexture(_radianceTexture)
+        .bindMipMapTextures(_voxelTextures);
+    sz = std::ceil(mipDimension / 8.f);
+    _mipMapBaseShader.dispatchCompute({sz, sz, sz});
+    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+
+    /* Generate MipMapVolume */
+    mipDimension = _volumeDimension / 4;
+    Int mipMapLevel = 0;
+    while(mipDimension >= 1) {
+        _mipMapVolumeShader.setMipDimension(mipDimension)
+            .setMipLevel(mipMapLevel)
+            .bindMipMapSourceTextures(_voxelTextures)
+            .bindMipMapDestTextures(_voxelTextures, mipMapLevel + 1);
+        sz = std::ceil(mipDimension / 8.f);
+        _mipMapBaseShader.dispatchCompute({sz, sz, sz});
+        GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+        mipMapLevel++;
+        mipDimension /= 2;
+    }
+
     /* restore renderer/framebuffer */
     GL::defaultFramebuffer.setViewport({{}, viewportSize});
     _camera->setViewport(viewportSize);
@@ -261,15 +286,22 @@ void VCTExample::drawEvent() {
     /* clear color and depth */
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
-    Matrix4 modelMatrix = Matrix4::translation(_minPoint) * Matrix4::scaling(Vector3{_voxelSize});
-	Matrix4 viewMatrix = _camera->cameraMatrix();
-	Matrix4 transformationMatrix = _camera->projectionMatrix() * viewMatrix * modelMatrix;
+    UnsignedInt drawMipLevel = 0;
+    UnsignedInt drawDir = 0;
+    UnsignedInt vDimension = static_cast<UnsignedInt>(_volumeDimension / pow(2.0f, drawMipLevel));
+
+    Matrix4 modelMatrix = Matrix4::translation(_minPoint) * Matrix4::scaling(Vector3{_volumeGridSize / vDimension});
+    Matrix4 viewMatrix = _camera->cameraMatrix();
+    Matrix4 transformationMatrix = _camera->projectionMatrix() * viewMatrix * modelMatrix;
 
     // Utility::Debug{} << transformationMatrix;
 
     _voxelVisualizationShader.setVolumeDimension(static_cast<UnsignedInt>(_volumeDimension))
-        .setTransformationMatrix(transformationMatrix)
-        .bindVoxelTexture(_radianceTexture); // _albedoTexture
+        .setTransformationMatrix(transformationMatrix);
+    if(drawMipLevel == 0)
+        _voxelVisualizationShader.bindVoxelTexture(_radianceTexture);
+    else
+        _voxelVisualizationShader.bindVoxelTexture(_voxelTextures[drawDir], drawMipLevel - 1);
 
     _debugVoxelsMesh.draw(_voxelVisualizationShader);
 
@@ -283,36 +315,37 @@ void VCTExample::drawEvent() {
 }
 
 void VCTExample::initTextures() {
-    Containers::Array<char> data(Containers::ValueInit, _volumeDimension * _volumeDimension * _volumeDimension * 4);
-    Image3D zeroImage{PixelFormat::RGBA8UI, {_volumeDimension, _volumeDimension, _volumeDimension}, std::move(data)};
-
     _albedoTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
-                .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
-                .setSubImage(0, {}, zeroImage)
-                .generateMipmap();
+                .setStorage(1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension});
 
     _normalTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
-                .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
-                .setSubImage(0, {}, zeroImage)
-                .generateMipmap();
+                .setStorage(1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension});
 
     _emissionTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
-                .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
-                .setSubImage(0, {}, zeroImage)
-                .generateMipmap();
+                .setStorage(1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension});
 
     _radianceTexture.setMagnificationFilter(GL::SamplerFilter::Linear)
                 .setMinificationFilter(GL::SamplerFilter::Linear)
                 .setWrapping(GL::SamplerWrapping::ClampToEdge)
-                .setStorage(Math::log2(_volumeDimension) + 1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension})
-                .setSubImage(0, {}, zeroImage)
-                .generateMipmap();
+                .setStorage(1, GL::TextureFormat::RGBA8, {_volumeDimension, _volumeDimension, _volumeDimension});
+
+    Int mipSize = _volumeDimension / 2;
+    Containers::Array<char> data(Containers::ValueInit, mipSize * mipSize * mipSize * 4);
+    Image3D zeroImage{PixelFormat::RGBA8UI, {mipSize, mipSize, mipSize}, std::move(data)};
+    for(UnsignedInt i = 0; i < 6; i++) {
+        _voxelTextures[i].setMagnificationFilter(GL::SamplerFilter::Linear)
+                    .setMinificationFilter(GL::SamplerFilter::Linear)
+                    .setWrapping(GL::SamplerWrapping::ClampToEdge)
+                    .setStorage(Math::log2(mipSize) + 1, GL::TextureFormat::RGBA8, {mipSize, mipSize, mipSize})
+                    .setSubImage(0, {}, zeroImage)
+                    .generateMipmap();
+    }
 }
 }}
 

@@ -14,15 +14,15 @@ layout(binding = 4, rgba8) uniform image3D voxelNormal;
 layout(binding = 2, rgba8) uniform image3D readonly voxelEmissive;
 layout(binding = 3, rgba8) uniform image3D writeonly voxelRadiance;
 
-layout(location=0)
+layout(location = 0)
 uniform int volumeDimension;
-layout(location=1)
+layout(location = 1)
 uniform float voxelSize;
-layout(location=2)
+layout(location = 2)
 uniform float voxelScale;
-layout(location=3)
+layout(location = 3)
 uniform vec3 worldMinPoint;
-layout(location=4)
+layout(location = 4)
 uniform float traceShadowHit;
 
 struct lightSource
@@ -38,7 +38,7 @@ struct lightSource
     float quadraticAttenuation;
 };
 
-layout(location=5)
+layout(location = 5)
 uniform lightSource lights[LIGHT_COUNT];
 
 vec3 VoxelToWorld(ivec3 pos)

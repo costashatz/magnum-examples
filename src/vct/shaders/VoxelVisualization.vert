@@ -5,15 +5,15 @@ out vec4 albedo;
 
 layout(binding = 0, rgba8) uniform readonly image3D voxel;
 
-layout(location=0)
+layout(location = 0)
 uniform uint volumeDimension;
 
 void main()
 {
 	vec3 position = vec3
 	(
-		gl_VertexID % volumeDimension,
-		(gl_VertexID / volumeDimension) % volumeDimension,
+		mod(gl_VertexID, volumeDimension),
+		mod((gl_VertexID / volumeDimension), volumeDimension),
 		gl_VertexID / (volumeDimension * volumeDimension)
 	);
 
