@@ -10,7 +10,7 @@ layout (local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 #define EPSILON 1e-30
 
 layout(binding = 0) uniform sampler3D voxelAlbedo;
-layout(binding = 4, rgba8) uniform image3D voxelNormal;
+layout(binding = 1, rgba8) uniform image3D voxelNormal;
 layout(binding = 2, rgba8) uniform image3D readonly voxelEmissive;
 layout(binding = 3, rgba8) uniform image3D writeonly voxelRadiance;
 

@@ -73,6 +73,7 @@ class VoxelizedObject: public Object3D, SceneGraph::Drawable3D {
 
     private:
         virtual void draw(const Matrix4&, SceneGraph::Camera3D&) {
+            // TO-DO: Fix transformations
             Matrix4 tr = Matrix4::scaling({0.2f, 0.2f, 0.2f}) * absoluteTransformationMatrix(); //Matrix4::scaling({0.2f, 0.2f, 0.2f}) * absoluteTransformationMatrix();//transformationMatrix;//Matrix4::scaling({0.1f, 0.1f, 0.1f}) * transformationMatrix;
             // Utility::Debug{} << tr;
             _voxelizationShader.setTransformationMatrix(tr)
