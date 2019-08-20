@@ -30,6 +30,7 @@
 #include <Corrade/Containers/Array.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/ImageFormat.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/PixelFormat.h>
@@ -54,6 +55,7 @@
 #include <Magnum/Shaders/Flat.h>
 
 #include "ClearVoxelsShader.h"
+#include "GeometryShader.h"
 #include "InjectRadianceShader.h"
 #include "MipMapBaseShader.h"
 #include "MipMapVolumeShader.h"
@@ -88,6 +90,27 @@ class VoxelizedObject: public Object3D, SceneGraph::Drawable3D {
         VoxelizationShader& _voxelizationShader;
 };
 
+class GeometryObject: public Object3D, SceneGraph::Drawable3D {
+    public:
+        explicit GeometryObject(const Color3& diffuseColor, GL::Mesh& mesh, GeometryShader& shader, Object3D& parent, SceneGraph::DrawableGroup3D& drawables): Object3D{&parent}, SceneGraph::Drawable3D{*this, &drawables}, _color{diffuseColor}, _mesh(mesh), _geometryShader(shader) {}
+
+    private:
+        virtual void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
+            Matrix4 tr = camera.projectionMatrix() * transformationMatrix * Matrix4::scaling({0.2f, 0.2f, 0.2f});
+            _geometryShader.setTransformationMatrix(tr)
+                .setNormalMatrix(tr.rotationScaling())
+                .setDiffuseColor(_color)
+                .setSpecularColor(Color3{0.f, 0.f, 0.f})
+                .setShininess(0.f)
+                .setEmissiveColor(Color3{0.f, 0.f, 0.f});
+            _mesh.draw(_geometryShader);
+        }
+
+        Color3 _color;
+        GL::Mesh& _mesh;
+        GeometryShader& _geometryShader;
+};
+
 class ColoredObject: public Object3D, SceneGraph::Drawable3D {
     public:
         explicit ColoredObject(const Color4& color, GL::Mesh& mesh, Shaders::Flat3D& shader, Object3D& parent, SceneGraph::DrawableGroup3D& drawables): Object3D{&parent}, SceneGraph::Drawable3D{*this, &drawables}, _color{color}, _mesh(mesh), _shader(shader) {}
@@ -112,11 +135,12 @@ class VCTExample: public Platform::Application {
     private:
         void drawEvent() override;
         void initTextures();
+        void initGeometryBuffer();
 
         Scene3D _scene;
         Object3D* _cameraObject;
         SceneGraph::Camera3D* _camera;
-        SceneGraph::DrawableGroup3D _voxelized, _colored;
+        SceneGraph::DrawableGroup3D _voxelized, _colored, _geometry;
 
         GL::Mesh _sphere, _cube, _debugVoxelsMesh;
         VoxelizationShader _voxelizationShader;
@@ -125,6 +149,7 @@ class VCTExample: public Platform::Application {
         InjectRadianceShader _injectRadianceShader;
         MipMapBaseShader _mipMapBaseShader;
         MipMapVolumeShader _mipMapVolumeShader;
+        GeometryShader _geometryShader;
         Shaders::Flat3D _flatShader;
         Int _volumeDimension = 128;
         Float _volumeGridSize = 1.5f;
@@ -133,6 +158,8 @@ class VCTExample: public Platform::Application {
         Vector3 _minPoint = {-_volumeGridSize / 2.f, -_volumeGridSize / 2.f, -_volumeGridSize / 2.f};
         GL::Texture3D _albedoTexture, _normalTexture, _emissionTexture;
         GL::Texture3D _radianceTexture, _voxelTextures[6];
+        GL::Framebuffer _geometrybuffer{Magnum::NoCreate};
+        GL::Texture2D _geometryAlbedoTexture, _geometryNormalTexture, _geometrySpecularTexture, _geometryEmissionTexture, _geometryDepthTexture;
         Timeline _timeline;
         std::vector<Matrix4> _projectionMatrices, _projectionIMatrices;
 };
@@ -141,6 +168,7 @@ VCTExample::VCTExample(const Arguments& arguments):
     Platform::Application{arguments, Configuration{}.setTitle("Magnum Voxel Cone Tracing Example")}
 {
     initTextures();
+    initGeometryBuffer();
 
     _sphere = MeshTools::compile(Primitives::uvSphereSolid(16, 32)); // MeshTools::compile(Primitives::icosphereSolid(4));
     _cube = MeshTools::compile(Primitives::cubeSolid());
@@ -175,6 +203,8 @@ VCTExample::VCTExample(const Arguments& arguments):
     (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-2.2f, 0.f, -2.f});
     // (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.2f});
     // (new ColoredObject(green, _cube, _flatShader, _scene, _colored))->translate({-0.44f, 0.f, -0.4f});
+    (new GeometryObject(red.rgb(), _sphere, _geometryShader, _scene, _geometry))->translate({0.f, 0.f, 0.2f});
+    (new GeometryObject(green.rgb(), _cube, _geometryShader, _scene, _geometry))->translate({-0.44f, 0.f, -0.4f});
 
     /* Configure camera */
     _cameraObject = new Object3D{&_scene};
@@ -274,7 +304,28 @@ void VCTExample::drawEvent() {
         mipDimension /= 2;
     }
 
+    /* Do Geometry pass */
+    _geometrybuffer.bind();
+    GL::Renderer::setColorMask(true, true, true, true);
+    GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+
+    /* set clear color to black */
+    GL::Renderer::setClearColor(Color4{0.f, 0.f, 0.f, 0.f});
+    // GL::Renderer::setClearDepth(1.f);
+    /* clear color and depth */
+    _geometrybuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
+
+    _camera->draw(_geometry);
+
+    // _geometryAlbedoTexture.bind(5);
+    // _geometryNormalTexture.bind(6);
+    // _geometrySpecularTexture.bind(7);
+    // _geometryEmissionTexture.bind(8);
+    // _geometryDepthTexture.bind(9);
+
     /* restore renderer/framebuffer */
+    GL::defaultFramebuffer.bind();
     GL::defaultFramebuffer.setViewport({{}, viewportSize});
     _camera->setViewport(viewportSize);
 
@@ -347,6 +398,49 @@ void VCTExample::initTextures() {
                     .setSubImage(0, {}, zeroImage)
                     .generateMipmap();
     }
+}
+
+void VCTExample::initGeometryBuffer() {
+    Range2Di viewport = GL::defaultFramebuffer.viewport();
+    Vector2i viewportSize = viewport.size();
+
+    _geometrybuffer = GL::Framebuffer(viewport);
+    _geometryAlbedoTexture.setMagnificationFilter(GL::SamplerFilter::Nearest)
+                    .setMinificationFilter(GL::SamplerFilter::Nearest)
+                    .setStorage(1, GL::TextureFormat::RGB8, viewportSize);
+    _geometryNormalTexture.setMagnificationFilter(GL::SamplerFilter::Nearest)
+                    .setMinificationFilter(GL::SamplerFilter::Nearest)
+                    .setStorage(1, GL::TextureFormat::RGBA16F, viewportSize);
+    _geometrySpecularTexture.setMagnificationFilter(GL::SamplerFilter::Nearest)
+                    .setMinificationFilter(GL::SamplerFilter::Nearest)
+                    .setStorage(1, GL::TextureFormat::RGBA8, viewportSize);
+    _geometryEmissionTexture.setMagnificationFilter(GL::SamplerFilter::Nearest)
+                    .setMinificationFilter(GL::SamplerFilter::Nearest)
+                    .setStorage(1, GL::TextureFormat::RGB8, viewportSize);
+    _geometryDepthTexture.setMagnificationFilter(GL::SamplerFilter::Nearest)
+                    .setMinificationFilter(GL::SamplerFilter::Nearest)
+                    .setStorage(1, GL::TextureFormat::DepthComponent24, viewportSize);
+
+    /* Color information*/
+    _geometrybuffer.attachTexture(
+        GL::Framebuffer::ColorAttachment(0), _geometryAlbedoTexture, 0);
+    /* Normal information */
+    _geometrybuffer.attachTexture(
+        GL::Framebuffer::ColorAttachment(1), _geometryNormalTexture, 0);
+    /* Specular and shininess information */
+    _geometrybuffer.attachTexture(
+        GL::Framebuffer::ColorAttachment(2), _geometrySpecularTexture, 0);
+    /* Emission information */
+    _geometrybuffer.attachTexture(
+        GL::Framebuffer::ColorAttachment(3), _geometryEmissionTexture, 0);
+    /* Depth information */
+    _geometrybuffer.attachTexture(
+        GL::Framebuffer::BufferAttachment::Depth, _geometryDepthTexture, 0);
+
+    _geometrybuffer.mapForDraw({{0, GL::Framebuffer::ColorAttachment(0)},
+                            {1, GL::Framebuffer::ColorAttachment(1)},
+                            {2, GL::Framebuffer::ColorAttachment(2)},
+                            {3, GL::Framebuffer::ColorAttachment(3)}});
 }
 }}
 
