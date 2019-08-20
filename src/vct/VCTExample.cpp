@@ -212,7 +212,7 @@ VCTExample::VCTExample(const Arguments& arguments):
     _cameraObject->setTransformation(Matrix4::lookAt({2.f, 1.f, 1.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
     _camera = new SceneGraph::Camera3D{*_cameraObject};
     _camera->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
-        .setProjectionMatrix(Matrix4::perspectiveProjection(45.0_degf, 4.0f/3.0f, 0.001f, 100.0f))
+        .setProjectionMatrix(Matrix4::perspectiveProjection(45.0_degf, 4.0f/3.0f, 0.2f, 50.0f))
         .setViewport(GL::defaultFramebuffer.viewport().size());
 
     /* Loop at 60 Hz max */
@@ -357,7 +357,8 @@ void VCTExample::drawEvent() {
 
     GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
 
-    // _renderTextureShader.bindOutputTexture(_geometryAlbedoTexture);
+    // _renderTextureShader.bindOutputTexture(_geometryDepthTexture);
+    // _renderTextureShader.setDepth(1);
     // // _renderTextureShader.bindOutputTexture(_geometryNormalTexture);
     // GL::Mesh mesh;
     // mesh.setCount(3)

@@ -34,7 +34,7 @@ class GeometryShader: public GL::AbstractShaderProgram {
 
             CORRADE_INTERNAL_ASSERT_OUTPUT(link());
 
-            // /* Get uniform locations */
+            /* Get uniform locations */
             _transformationMatrixUniform = uniformLocation("transformationMatrix");
             _normalMatrixUniform = uniformLocation("normalMatrix");
             _diffuseColorUniform = uniformLocation("diffuseColor");

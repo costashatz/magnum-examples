@@ -35,6 +35,7 @@ class MipMapVolumeShader: public GL::AbstractShaderProgram {
 
             CORRADE_INTERNAL_ASSERT_OUTPUT(link());
 
+            /* Get uniform locations */
             _mipDimensionUniform = uniformLocation("mipDimension");
             _mipLevelUniform = uniformLocation("mipLevel");
         }

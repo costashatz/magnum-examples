@@ -34,6 +34,16 @@ class RenderTextureShader: public GL::AbstractShaderProgram {
             attachShaders({vert, frag});
 
             CORRADE_INTERNAL_ASSERT_OUTPUT(link());
+
+            /* Get uniform locations */
+            _isDepthUniform = uniformLocation("isDepth");
+            /* By default not depth */
+            setDepth(0);
+        }
+
+        RenderTextureShader& setDepth(Int isDepth) {
+            setUniform(_isDepthUniform, isDepth);
+            return *this;
         }
 
         RenderTextureShader& bindOutputTexture(GL::Texture2D& tex) {
@@ -42,6 +52,7 @@ class RenderTextureShader: public GL::AbstractShaderProgram {
         }
 
     private:
+        Int _isDepthUniform;
         Int _texturePos = 0;
 };
 }}

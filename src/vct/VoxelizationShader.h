@@ -42,7 +42,7 @@ class VoxelizationShader: public GL::AbstractShaderProgram {
 
             CORRADE_INTERNAL_ASSERT_OUTPUT(link());
 
-            // /* Get uniform locations */
+            /* Get uniform locations */
             _transformationMatrixUniform = uniformLocation("transformationMatrix");
             _normalMatrixUniform = uniformLocation("normalMatrix");
             _viewProjectionUniform = uniformLocation("viewProjections[0]");
