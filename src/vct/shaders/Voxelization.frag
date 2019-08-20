@@ -12,16 +12,11 @@ layout (pixel_center_integer) in vec4 gl_FragCoord;
 layout(binding = 0, r32ui) uniform volatile coherent uimage3D voxelAlbedo;
 layout(binding = 1, r32ui) uniform volatile coherent uimage3D voxelNormal;
 layout(binding = 2, r32ui) uniform volatile coherent uimage3D voxelEmission;
-// layout(binding = 3, r8) uniform image3D staticVoxelFlag;
 
-// layout(location = 4)
-// uniform uint volumeDimension;
 layout(location = 11)
 uniform vec4 diffuseColor;
 layout(location = 12)
 uniform vec3 emissiveColor;
-// layout(location = 9)
-// uniform uint flagStaticVoxels;
 
 vec4 convRGBA8ToVec4(uint val)
 {
@@ -90,14 +85,6 @@ void main()
     vec4 albedo = diffuseColor;
     float opacity = albedo.a;
 
-    // if(flagStaticVoxels == 0)
-    // {
-    //     bool isStatic = imageLoad(staticVoxelFlag, position).r > 0.0f;
-
-    //     // force condition so writing is canceled
-    //     if(isStatic) opacity = 0.0f;
-    // }
-
     // alpha cutoff
     if(opacity > 0.0f)
     {
@@ -109,16 +96,11 @@ void main()
         // emissive.a = 1.0f;
         // bring normal to 0-1 range
         vec4 normal = vec4(EncodeNormal(normalize(worldNormal)), 1.0f);
-        // average normal per fragments sorrounding the voxel volume
+        // average normal per fragments around the voxel volume
         imageAtomicRGBA8Avg(voxelNormal, position, normal);
-        // average albedo per fragments sorrounding the voxel volume
+        // average albedo per fragments around the voxel volume
         imageAtomicRGBA8Avg(voxelAlbedo, position, albedo);
-        // average emission per fragments sorrounding the voxel volume
+        // average emission per fragments around the voxel volume
         imageAtomicRGBA8Avg(voxelEmission, position, emissive);
-        // // doing a static flagging pass for static geometry voxelization
-        // if(flagStaticVoxels == 1)
-        // {
-        //     imageStore(staticVoxelFlag, position, vec4(1.0));
-        // }
     }
 }
