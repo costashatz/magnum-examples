@@ -76,9 +76,7 @@ class VoxelizedObject: public Object3D, SceneGraph::Drawable3D {
 
     private:
         virtual void draw(const Matrix4&, SceneGraph::Camera3D&) {
-            // TO-DO: Fix transformations
-            Matrix4 tr = Matrix4::scaling({0.2f, 0.2f, 0.2f}) * absoluteTransformationMatrix(); //Matrix4::scaling({0.2f, 0.2f, 0.2f}) * absoluteTransformationMatrix();//transformationMatrix;//Matrix4::scaling({0.1f, 0.1f, 0.1f}) * transformationMatrix;
-            // Utility::Debug{} << tr;
+            Matrix4 tr = absoluteTransformationMatrix() * Matrix4::scaling({0.2f, 0.2f, 0.2f});
             _voxelizationShader.setTransformationMatrix(tr)
                 .setNormalMatrix(tr.rotationScaling())
                 .setDiffuseColor(_color)
@@ -200,9 +198,9 @@ VCTExample::VCTExample(const Arguments& arguments):
     }
 
     Color4 red = {1.f, 0.f, 0.f, 1.f};
-    (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 1.f});
+    (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 0.2f});
     Color4 green = {0.f, 1.f, 0.f, 1.f};
-    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-2.2f, 0.f, -2.f});
+    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-0.44f, 0.f, -0.4f});
     // (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.2f});
     // (new ColoredObject(green, _cube, _flatShader, _scene, _colored))->translate({-0.44f, 0.f, -0.4f});
     (new GeometryObject(red.rgb(), _sphere, _geometryShader, _scene, _geometry))->translate({0.f, 0.f, 0.2f});
