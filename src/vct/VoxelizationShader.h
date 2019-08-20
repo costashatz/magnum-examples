@@ -29,8 +29,11 @@ class VoxelizationShader: public GL::AbstractShaderProgram {
             GL::Shader geom{GL::Version::GL430, GL::Shader::Type::Geometry};
             GL::Shader frag{GL::Version::GL430, GL::Shader::Type::Fragment};
 
+            bool isNvidia = (GL::Context::hasCurrent() && (GL::Context::current().detectedDriver() == GL::Context::DetectedDriver::NVidia));
+
             vert.addSource(rs.get("VoxelizationShader.vert"));
             geom.addSource(rs.get("VoxelizationShader.geom"));
+            frag.addSource(isNvidia ? "#define NVIDIA\n" : "");
             frag.addSource(rs.get("VoxelizationShader.frag"));
 
             CORRADE_INTERNAL_ASSERT_OUTPUT(GL::Shader::compile({vert, geom, frag}));

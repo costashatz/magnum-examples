@@ -39,8 +39,11 @@ uint convVec4ToRGBA8(vec4 val)
     (uint(val.x) & 0x000000FF);
 }
 
-// void imageAtomicRGBA8Avg(volatile coherent uimage3D grid, ivec3 coords, vec4 value)
+#ifndef NVIDIA
+void imageAtomicRGBA8Avg(volatile coherent uimage3D grid, ivec3 coords, vec4 value)
+#else
 void imageAtomicRGBA8Avg(layout(r32ui) volatile coherent uimage3D grid, ivec3 coords, vec4 value)
+#endif
 {
     value.rgb *= 255.0;                 // optimize following calculations
     uint newVal = convVec4ToRGBA8(value);
