@@ -59,6 +59,7 @@
 #include "InjectRadianceShader.h"
 #include "MipMapBaseShader.h"
 #include "MipMapVolumeShader.h"
+#include "RenderTextureShader.h"
 #include "VoxelizationShader.h"
 #include "VoxelVisualizationShader.h"
 
@@ -96,8 +97,8 @@ class GeometryObject: public Object3D, SceneGraph::Drawable3D {
 
     private:
         virtual void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
-            Matrix4 tr = camera.projectionMatrix() * transformationMatrix * Matrix4::scaling({0.2f, 0.2f, 0.2f});
-            _geometryShader.setTransformationMatrix(tr)
+            Matrix4 tr = transformationMatrix * Matrix4::scaling({0.2f, 0.2f, 0.2f});
+            _geometryShader.setTransformationMatrix(camera.projectionMatrix() * tr)
                 .setNormalMatrix(tr.rotationScaling())
                 .setDiffuseColor(_color)
                 .setSpecularColor(Color3{0.f, 0.f, 0.f})
@@ -150,6 +151,7 @@ class VCTExample: public Platform::Application {
         MipMapBaseShader _mipMapBaseShader;
         MipMapVolumeShader _mipMapVolumeShader;
         GeometryShader _geometryShader;
+        RenderTextureShader _renderTextureShader;
         Shaders::Flat3D _flatShader;
         Int _volumeDimension = 128;
         Float _volumeGridSize = 1.5f;
@@ -306,6 +308,8 @@ void VCTExample::drawEvent() {
 
     /* Do Geometry pass */
     _geometrybuffer.bind();
+    _geometrybuffer.setViewport({{}, viewportSize});
+    _camera->setViewport(viewportSize);
     GL::Renderer::setColorMask(true, true, true, true);
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
@@ -317,12 +321,6 @@ void VCTExample::drawEvent() {
     _geometrybuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
     _camera->draw(_geometry);
-
-    // _geometryAlbedoTexture.bind(5);
-    // _geometryNormalTexture.bind(6);
-    // _geometrySpecularTexture.bind(7);
-    // _geometryEmissionTexture.bind(8);
-    // _geometryDepthTexture.bind(9);
 
     /* restore renderer/framebuffer */
     GL::defaultFramebuffer.bind();
@@ -360,6 +358,12 @@ void VCTExample::drawEvent() {
     // _camera->draw(_colored);
 
     GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+
+    // _renderTextureShader.bindOutputTexture(_geometryAlbedoTexture);
+    // // _renderTextureShader.bindOutputTexture(_geometryNormalTexture);
+    // GL::Mesh mesh;
+    // mesh.setCount(3)
+    //     .draw(_renderTextureShader);
 
     swapBuffers();
     _timeline.nextFrame();
