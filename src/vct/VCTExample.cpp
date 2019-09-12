@@ -40,6 +40,7 @@
 #include <Magnum/ImageView.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/MeshTools/Transform.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Primitives/Cube.h>
@@ -60,6 +61,7 @@
 #include "MipMapBaseShader.h"
 #include "MipMapVolumeShader.h"
 #include "RenderTextureShader.h"
+#include "VCTShader.h"
 #include "VoxelizationShader.h"
 #include "VoxelVisualizationShader.h"
 
@@ -76,7 +78,7 @@ class VoxelizedObject: public Object3D, SceneGraph::Drawable3D {
 
     private:
         virtual void draw(const Matrix4&, SceneGraph::Camera3D&) {
-            Matrix4 tr = absoluteTransformationMatrix() * Matrix4::scaling({0.2f, 0.2f, 0.2f});
+            Matrix4 tr = absoluteTransformationMatrix();
             _voxelizationShader.setTransformationMatrix(tr)
                 .setNormalMatrix(tr.rotationScaling())
                 .setDiffuseColor(_color)
@@ -95,9 +97,9 @@ class GeometryObject: public Object3D, SceneGraph::Drawable3D {
 
     private:
         virtual void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
-            Matrix4 tr = transformationMatrix * Matrix4::scaling({0.2f, 0.2f, 0.2f});
+            Matrix4 tr = transformationMatrix;
             _geometryShader.setTransformationMatrix(camera.projectionMatrix() * tr)
-                .setNormalMatrix(tr.rotationScaling())
+                .setNormalMatrix(absoluteTransformationMatrix().rotationScaling()) // We need normal in world frame
                 .setDiffuseColor(_color)
                 .setSpecularColor(Color3{0.f, 0.f, 0.f})
                 .setShininess(0.f)
@@ -150,12 +152,14 @@ class VCTExample: public Platform::Application {
         MipMapVolumeShader _mipMapVolumeShader;
         GeometryShader _geometryShader;
         RenderTextureShader _renderTextureShader;
+        VCTShader _vctShader;
         Shaders::Flat3D _flatShader;
         Int _volumeDimension = 128;
         Float _volumeGridSize = 1.5f;
         Float _voxelSize = _volumeGridSize / static_cast<Float>(_volumeDimension);
         Float _voxelScale = 1.f / _volumeGridSize;
         Vector3 _minPoint = {-_volumeGridSize / 2.f, -_volumeGridSize / 2.f, -_volumeGridSize / 2.f};
+        Vector3 _maxPoint = {_volumeGridSize / 2.f, _volumeGridSize / 2.f, _volumeGridSize / 2.f};
         GL::Texture3D _albedoTexture, _normalTexture, _emissionTexture;
         GL::Texture3D _radianceTexture, _voxelTextures[6];
         GL::Framebuffer _geometrybuffer{Magnum::NoCreate};
@@ -170,8 +174,13 @@ VCTExample::VCTExample(const Arguments& arguments):
     initTextures();
     initGeometryBuffer();
 
-    _sphere = MeshTools::compile(Primitives::uvSphereSolid(16, 32)); // MeshTools::compile(Primitives::icosphereSolid(4));
-    _cube = MeshTools::compile(Primitives::cubeSolid());
+    auto sphereData = Primitives::uvSphereSolid(16, 32);
+    auto cubeData = Primitives::cubeSolid();
+    MeshTools::transformVectorsInPlace(Matrix4::scaling({0.2f, 0.2f, 0.2f}), sphereData.positions(0));
+    MeshTools::transformVectorsInPlace(Matrix4::scaling({0.2f, 0.2f, 0.2f}), cubeData.positions(0));
+
+    _sphere = MeshTools::compile(sphereData); // MeshTools::compile(Primitives::icosphereSolid(4));
+    _cube = MeshTools::compile(cubeData);
 
     /* create debug mesh for drawing voxels */
     _debugVoxelsMesh.setPrimitive(GL::MeshPrimitive::Points)
@@ -200,16 +209,17 @@ VCTExample::VCTExample(const Arguments& arguments):
     Color4 red = {1.f, 0.f, 0.f, 1.f};
     (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 0.2f});
     Color4 green = {0.f, 1.f, 0.f, 1.f};
-    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-0.44f, 0.f, -0.4f});
+    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-0.44f, 0.f, -0.4f}).rotateYLocal(25.0_degf); // .rotateYLocal(25.0_degf).rotateZLocal(-15.0_degf);
     // (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.2f});
     // (new ColoredObject(green, _cube, _flatShader, _scene, _colored))->translate({-0.44f, 0.f, -0.4f});
     (new GeometryObject(red.rgb(), _sphere, _geometryShader, _scene, _geometry))->translate({0.f, 0.f, 0.2f});
-    (new GeometryObject(green.rgb(), _cube, _geometryShader, _scene, _geometry))->translate({-0.44f, 0.f, -0.4f});
+    (new GeometryObject(green.rgb(), _cube, _geometryShader, _scene, _geometry))->translate({-0.44f, 0.f, -0.4f}).rotateYLocal(25.0_degf); // .rotateYLocal(25.0_degf).rotateZLocal(-15.0_degf);
 
     /* Configure camera */
     _cameraObject = new Object3D{&_scene};
     // _cameraObject->translate(Vector3::zAxis(4.f));
     _cameraObject->setTransformation(Matrix4::lookAt({2.f, 1.f, 1.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
+    // _cameraObject->setTransformation(Matrix4::lookAt({0.4f, 2.f, 0.01f}, {0.4f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
     _camera = new SceneGraph::Camera3D{*_cameraObject};
     _camera->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(45.0_degf, 4.0f/3.0f, 0.2f, 50.0f))
@@ -270,7 +280,7 @@ void VCTExample::drawEvent() {
         .setVoxelScale(_voxelScale)
         .setVoxelSize(_voxelSize)
         .setMinPoint(_minPoint)
-        .setTraceShadowHit(0.5f)
+        .setTraceShadowHit(0.03f)
         .bindAlbedoTexture(_albedoTexture)
         .bindNormalTexture(_normalTexture)
         .bindEmissionTexture(_emissionTexture)
@@ -351,7 +361,7 @@ void VCTExample::drawEvent() {
     else
         _voxelVisualizationShader.bindVoxelTexture(_voxelTextures[drawDir], drawMipLevel - 1);
 
-    _debugVoxelsMesh.draw(_voxelVisualizationShader);
+    // _debugVoxelsMesh.draw(_voxelVisualizationShader);
 
     // _camera->draw(_colored);
 
@@ -363,6 +373,27 @@ void VCTExample::drawEvent() {
     // GL::Mesh mesh;
     // mesh.setCount(3)
     //     .draw(_renderTextureShader);
+
+    Matrix4 trMat = _camera->cameraMatrix().inverted() * _camera->projectionMatrix().inverted();
+    Vector3 cameraPosition = _cameraObject->absoluteTransformationMatrix().translation();
+    _vctShader.setInverseProjectionViewMatrix(trMat)
+        .setCameraPosition(cameraPosition)
+        .setVoxelScale(_voxelScale)
+        .setWorldMinPoint(_minPoint)
+        .setWorldMaxPoint(_maxPoint)
+        .setVolumeDimension(static_cast<UnsignedInt>(_volumeDimension))
+        .bindAlbedoTexture(_geometryAlbedoTexture)
+        .bindNormalTexture(_geometryNormalTexture)
+        .bindSpecularTexture(_geometrySpecularTexture)
+        .bindEmissionTexture(_geometryEmissionTexture)
+        .bindDepthTexture(_geometryDepthTexture)
+        .bindVoxelVisibility(_normalTexture)
+        .bindVoxelTexture(_radianceTexture)
+        .bindMipMapTextures(_voxelTextures)
+        .setLight();
+    GL::Mesh mesh;
+    mesh.setCount(3)
+        .draw(_vctShader);
 
     swapBuffers();
     _timeline.nextFrame();

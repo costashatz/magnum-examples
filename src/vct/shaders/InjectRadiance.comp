@@ -213,7 +213,7 @@ void main()
 
     if(albedo.a < EPSILON) { return; }
 
-    imageStore(voxelRadiance, writePos, vec4(voxelScale, 0.f, 0.f, 1.f));
+    // imageStore(voxelRadiance, writePos, vec4(voxelScale, 0.f, 0.f, 1.f));
     // imageStore(voxelRadiance, writePos, albedo);
 
     albedo.a = 0.0f;
