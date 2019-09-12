@@ -63,8 +63,8 @@ const float aoAlpha = 0.f;
 const float aoFalloff = 800.0f;
 // Maximum tracing distance
 const float maxTracingDistanceGlobal = 0.95f;
-const float samplingFactor = 0.5f;
-const float bounceStrength = 2.f;
+const float samplingFactor = 0.03f;
+const float bounceStrength = 1.f;
 const float coneShadowTolerance = 0.1f;
 const float coneShadowAperture = 0.2f;
 
@@ -177,7 +177,8 @@ vec4 TraceCone(vec3 position, vec3 normal, vec3 direction, float aperture, bool 
         // get directional sample from anisotropic representation
         vec4 anisoSample = AnisotropicSample(coord, weight, visibleFace, mipLevel);
         // front to back composition
-        coneSample += (1.0f - coneSample.a) * anisoSample;
+        // coneSample += (1.0f - coneSample.a) * anisoSample;
+        coneSample += pow(1.0f - coneSample.a, 2.f) * anisoSample * exp(-0.8f * dst * dst / samplingFactor);
         // ambient occlusion
         if(traceOcclusion && occlusion < 1.0)
         {
@@ -266,7 +267,7 @@ vec4 CalculateIndirectLighting(vec3 position, vec3 normal, vec3 albedo, vec4 spe
     if(any(greaterThan(albedo, diffuseTrace.rgb)))
     {
         // diffuse cone setup
-        const float aperture = 0.57735f;
+        const float aperture = 0.57735f; //0.325f;
         vec3 guide = vec3(0.0f, 1.0f, 0.0f);
 
         if (abs(dot(normal, guide)) == 1.0f)
@@ -287,7 +288,8 @@ vec4 CalculateIndirectLighting(vec3 position, vec3 normal, vec3 albedo, vec4 spe
             diffuseTrace += TraceCone(position, normal, coneDirection, aperture, true) * diffuseConeWeights[i];
         }
 
-        diffuseTrace.rgb *= albedo;
+        // TO-DO: Check how to do this blending correctly
+        diffuseTrace.rgb *= (albedo + vec3(0.3f));
     }
 
     vec3 result = bounceStrength * (diffuseTrace.rgb + specularTrace.rgb);

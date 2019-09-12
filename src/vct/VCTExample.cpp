@@ -83,6 +83,8 @@ class VoxelizedObject: public Object3D, SceneGraph::Drawable3D {
                 .setNormalMatrix(tr.rotationScaling())
                 .setDiffuseColor(_color)
                 .setEmissiveColor(Color3{0.f, 0.f, 0.f});
+            // if(_color.r() == 1.f && _color.g() == 0.f)
+            //     _voxelizationShader.setEmissiveColor(_color.rgb());
             _mesh.draw(_voxelizationShader);
         }
 
@@ -104,6 +106,8 @@ class GeometryObject: public Object3D, SceneGraph::Drawable3D {
                 .setSpecularColor(Color3{0.f, 0.f, 0.f})
                 .setShininess(0.f)
                 .setEmissiveColor(Color3{0.f, 0.f, 0.f});
+            // if(_color.r() == 1.f && _color.g() == 0.f)
+            //     _geometryShader.setEmissiveColor(_color);
             _mesh.draw(_geometryShader);
         }
 
@@ -143,7 +147,7 @@ class VCTExample: public Platform::Application {
         SceneGraph::Camera3D* _camera;
         SceneGraph::DrawableGroup3D _voxelized, _colored, _geometry;
 
-        GL::Mesh _sphere, _cube, _debugVoxelsMesh;
+        GL::Mesh _sphere, _cube, _floor, _debugVoxelsMesh;
         VoxelizationShader _voxelizationShader;
         VoxelVisualizationShader _voxelVisualizationShader;
         ClearVoxelsShader _clearVoxelsShader;
@@ -154,7 +158,7 @@ class VCTExample: public Platform::Application {
         RenderTextureShader _renderTextureShader;
         VCTShader _vctShader;
         Shaders::Flat3D _flatShader;
-        Int _volumeDimension = 128;
+        Int _volumeDimension = 64;
         Float _volumeGridSize = 1.5f;
         Float _voxelSize = _volumeGridSize / static_cast<Float>(_volumeDimension);
         Float _voxelScale = 1.f / _volumeGridSize;
@@ -176,11 +180,14 @@ VCTExample::VCTExample(const Arguments& arguments):
 
     auto sphereData = Primitives::uvSphereSolid(16, 32);
     auto cubeData = Primitives::cubeSolid();
+    auto floorData = Primitives::cubeSolid();
     MeshTools::transformVectorsInPlace(Matrix4::scaling({0.2f, 0.2f, 0.2f}), sphereData.positions(0));
     MeshTools::transformVectorsInPlace(Matrix4::scaling({0.2f, 0.2f, 0.2f}), cubeData.positions(0));
+    MeshTools::transformVectorsInPlace(Matrix4::scaling({1.f, 0.01f, 1.f}), floorData.positions(0));
 
     _sphere = MeshTools::compile(sphereData); // MeshTools::compile(Primitives::icosphereSolid(4));
     _cube = MeshTools::compile(cubeData);
+    _floor = MeshTools::compile(floorData);
 
     /* create debug mesh for drawing voxels */
     _debugVoxelsMesh.setPrimitive(GL::MeshPrimitive::Points)
@@ -207,19 +214,22 @@ VCTExample::VCTExample(const Arguments& arguments):
     }
 
     Color4 red = {1.f, 0.f, 0.f, 1.f};
-    (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 0.2f});
     Color4 green = {0.f, 1.f, 0.f, 1.f};
-    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-0.44f, 0.f, -0.4f}).rotateYLocal(25.0_degf); // .rotateYLocal(25.0_degf).rotateZLocal(-15.0_degf);
-    // (new ColoredObject(red, _sphere, _flatShader, _scene, _colored))->translate({0.f, 0.f, 0.2f});
-    // (new ColoredObject(green, _cube, _flatShader, _scene, _colored))->translate({-0.44f, 0.f, -0.4f});
+    Color4 yellow = {1.f, 1.f, 0.f, 1.f};
+
+    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25.0_degf); // .rotateYLocal(25.0_degf).rotateZLocal(-15.0_degf);
+    (new GeometryObject(green.rgb(), _cube, _geometryShader, _scene, _geometry))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25.0_degf); // .rotateYLocal(25.0_degf).rotateZLocal(-15.0_degf);
+
+    (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 0.2f});
     (new GeometryObject(red.rgb(), _sphere, _geometryShader, _scene, _geometry))->translate({0.f, 0.f, 0.2f});
-    (new GeometryObject(green.rgb(), _cube, _geometryShader, _scene, _geometry))->translate({-0.44f, 0.f, -0.4f}).rotateYLocal(25.0_degf); // .rotateYLocal(25.0_degf).rotateZLocal(-15.0_degf);
+
+    (new VoxelizedObject(yellow, _floor, _voxelizationShader, _scene, _voxelized))->translate({0.f, -0.5f, 0.f});
+    (new GeometryObject(yellow.rgb(), _floor, _geometryShader, _scene, _geometry))->translate({0.f, -0.5f, 0.f});
 
     /* Configure camera */
     _cameraObject = new Object3D{&_scene};
     // _cameraObject->translate(Vector3::zAxis(4.f));
     _cameraObject->setTransformation(Matrix4::lookAt({2.f, 1.f, 1.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
-    // _cameraObject->setTransformation(Matrix4::lookAt({0.4f, 2.f, 0.01f}, {0.4f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
     _camera = new SceneGraph::Camera3D{*_cameraObject};
     _camera->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(45.0_degf, 4.0f/3.0f, 0.2f, 50.0f))
@@ -280,7 +290,7 @@ void VCTExample::drawEvent() {
         .setVoxelScale(_voxelScale)
         .setVoxelSize(_voxelSize)
         .setMinPoint(_minPoint)
-        .setTraceShadowHit(0.03f)
+        .setTraceShadowHit(0.5f)
         .bindAlbedoTexture(_albedoTexture)
         .bindNormalTexture(_normalTexture)
         .bindEmissionTexture(_emissionTexture)
