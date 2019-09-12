@@ -290,7 +290,7 @@ void VCTExample::drawEvent() {
         .setVoxelScale(_voxelScale)
         .setVoxelSize(_voxelSize)
         .setMinPoint(_minPoint)
-        .setTraceShadowHit(0.5f)
+        .setTraceShadowHit(0.4f)
         .bindAlbedoTexture(_albedoTexture)
         .bindNormalTexture(_normalTexture)
         .bindEmissionTexture(_emissionTexture)
@@ -354,28 +354,26 @@ void VCTExample::drawEvent() {
     /* clear color and depth */
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
-    UnsignedInt drawMipLevel = 0;
-    UnsignedInt drawDir = 0;
-    UnsignedInt vDimension = static_cast<UnsignedInt>(_volumeDimension / pow(2.0f, drawMipLevel));
+    // UnsignedInt drawMipLevel = 0;
+    // UnsignedInt drawDir = 0;
+    // UnsignedInt vDimension = static_cast<UnsignedInt>(_volumeDimension / pow(2.0f, drawMipLevel));
 
-    Matrix4 modelMatrix = Matrix4::translation(_minPoint) * Matrix4::scaling(Vector3{_volumeGridSize / vDimension});
-    Matrix4 viewMatrix = _camera->cameraMatrix();
-    Matrix4 transformationMatrix = _camera->projectionMatrix() * viewMatrix * modelMatrix;
+    // Matrix4 modelMatrix = Matrix4::translation(_minPoint) * Matrix4::scaling(Vector3{_volumeGridSize / vDimension});
+    // Matrix4 viewMatrix = _camera->cameraMatrix();
+    // Matrix4 transformationMatrix = _camera->projectionMatrix() * viewMatrix * modelMatrix;
 
-    // Utility::Debug{} << transformationMatrix;
+    // // Utility::Debug{} << transformationMatrix;
 
-    _voxelVisualizationShader.setVolumeDimension(static_cast<UnsignedInt>(_volumeDimension))
-        .setTransformationMatrix(transformationMatrix);
-    if(drawMipLevel == 0)
-        _voxelVisualizationShader.bindVoxelTexture(_radianceTexture);
-    else
-        _voxelVisualizationShader.bindVoxelTexture(_voxelTextures[drawDir], drawMipLevel - 1);
+    // _voxelVisualizationShader.setVolumeDimension(static_cast<UnsignedInt>(_volumeDimension))
+    //     .setTransformationMatrix(transformationMatrix);
+    // if(drawMipLevel == 0)
+    //     _voxelVisualizationShader.bindVoxelTexture(_radianceTexture);
+    // else
+    //     _voxelVisualizationShader.bindVoxelTexture(_voxelTextures[drawDir], drawMipLevel - 1);
 
     // _debugVoxelsMesh.draw(_voxelVisualizationShader);
 
-    // _camera->draw(_colored);
-
-    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+    // GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
 
     // _renderTextureShader.bindOutputTexture(_geometryDepthTexture);
     // _renderTextureShader.setDepth(1);

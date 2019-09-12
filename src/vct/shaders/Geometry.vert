@@ -1,9 +1,9 @@
 // #version 430
 
 layout(location = 0)
-uniform mat4 transformationMatrix;
+uniform mat4 transformationMatrix; // view-projection space
 layout(location = 1)
-uniform mat3 normalMatrix;
+uniform mat3 normalMatrix; // world-space
 
 // TO-DO: Add textures
 

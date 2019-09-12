@@ -126,7 +126,7 @@ vec4 CalculateDirectLighting(vec3 position, vec3 normal, vec3 albedo)
 {
     normal = normalize(normal);
     // world space grid voxel size
-    float voxelWorldSize = 1.f /  (voxelScale * volumeDimension);
+    float voxelWorldSize = 2.f /  (voxelScale * volumeDimension);
     // calculate directional lighting
     vec4 directLighting = vec4(0.0f, 0.0f, 0.0f, 0.0f);
     vec4 current =  vec4(0.0f);
