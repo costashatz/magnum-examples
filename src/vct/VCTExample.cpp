@@ -193,19 +193,19 @@ VCTExample::VCTExample(const Arguments& arguments):
     _debugVoxelsMesh.setPrimitive(GL::MeshPrimitive::Points)
                     .setCount(_volumeDimension * _volumeDimension * _volumeDimension);
 
-    Float halfSize = _volumeGridSize / 2.0f;
+    Float halfSize = _volumeGridSize / 2.f;
     // projection matrices
     Matrix4 projectionMatrix = Matrix4::orthographicProjection({_volumeGridSize, _volumeGridSize}, 0.f, _volumeGridSize);
     // view matrices
     _projectionMatrices.resize(3);
     _projectionIMatrices.resize(3);
     Vector3 center = {0.f, 0.f, 0.f};
-    _projectionMatrices[0] = Matrix4::lookAt(center + Vector3(halfSize, 0.0f, 0.0f),
-                                     center, Vector3(0.0f, 1.0f, 0.0f)).invertedRigid();
-    _projectionMatrices[1] = Matrix4::lookAt(center + Vector3(0.0f, halfSize, 0.0f),
-                                     center, Vector3(0.0f, 0.0f, -1.0f)).invertedRigid();
-    _projectionMatrices[2] = Matrix4::lookAt(center + Vector3(0.0f, 0.0f, halfSize),
-                                     center, Vector3(0.0f, 1.0f, 0.0f)).invertedRigid();
+    _projectionMatrices[0] = Matrix4::lookAt(center + Vector3(halfSize, 0.f, 0.f),
+                                     center, Vector3(0.f, 1.f, 0.f)).invertedRigid();
+    _projectionMatrices[1] = Matrix4::lookAt(center + Vector3(0.f, halfSize, 0.f),
+                                     center, Vector3(0.f, 0.f, -1.f)).invertedRigid();
+    _projectionMatrices[2] = Matrix4::lookAt(center + Vector3(0.f, 0.f, halfSize),
+                                     center, Vector3(0.f, 1.f, 0.f)).invertedRigid();
     for(Int i = 0; i < 3; i++) {
         _projectionMatrices[i] = projectionMatrix * _projectionMatrices[i];
         // Utility::Debug{} << _projectionMatrices[i];
@@ -217,8 +217,8 @@ VCTExample::VCTExample(const Arguments& arguments):
     Color4 green = {0.f, 1.f, 0.f, 1.f};
     Color4 yellow = {1.f, 1.f, 0.f, 1.f};
 
-    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25.0_degf); // .rotateYLocal(25.0_degf).rotateZLocal(-15.0_degf);
-    (new GeometryObject(green.rgb(), _cube, _geometryShader, _scene, _geometry))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25.0_degf); // .rotateYLocal(25.0_degf).rotateZLocal(-15.0_degf);
+    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25._degf); // .rotateYLocal(25._degf).rotateZLocal(-15._degf);
+    (new GeometryObject(green.rgb(), _cube, _geometryShader, _scene, _geometry))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25._degf); // .rotateYLocal(25._degf).rotateZLocal(-15._degf);
 
     (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 0.2f});
     (new GeometryObject(red.rgb(), _sphere, _geometryShader, _scene, _geometry))->translate({0.f, 0.f, 0.2f});
@@ -232,7 +232,7 @@ VCTExample::VCTExample(const Arguments& arguments):
     _cameraObject->setTransformation(Matrix4::lookAt({2.f, 1.f, 1.f}, {0.f, 0.f, 0.f}, {0.f, 1.f, 0.f}));
     _camera = new SceneGraph::Camera3D{*_cameraObject};
     _camera->setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
-        .setProjectionMatrix(Matrix4::perspectiveProjection(45.0_degf, 4.0f/3.0f, 0.2f, 50.0f))
+        .setProjectionMatrix(Matrix4::perspectiveProjection(45._degf, 4.f / 3.f, 0.2f, 50.f))
         .setViewport(GL::defaultFramebuffer.viewport().size());
 
     /* Loop at 60 Hz max */
@@ -356,7 +356,7 @@ void VCTExample::drawEvent() {
 
     // UnsignedInt drawMipLevel = 0;
     // UnsignedInt drawDir = 0;
-    // UnsignedInt vDimension = static_cast<UnsignedInt>(_volumeDimension / pow(2.0f, drawMipLevel));
+    // UnsignedInt vDimension = static_cast<UnsignedInt>(_volumeDimension / pow(2.f, drawMipLevel));
 
     // Matrix4 modelMatrix = Matrix4::translation(_minPoint) * Matrix4::scaling(Vector3{_volumeGridSize / vDimension});
     // Matrix4 viewMatrix = _camera->cameraMatrix();
