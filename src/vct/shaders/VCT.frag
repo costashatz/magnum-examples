@@ -36,19 +36,22 @@ layout(location = 5)
 uniform uint volumeDimension;
 
 layout(location = 6)
-uniform lightSource lights[LIGHT_COUNT];
+uniform float aoAlpha;
+layout(location = 7)
+uniform float aoFalloff;
+layout(location = 8)
+uniform float maxTracingDistance;
+layout(location = 9)
+uniform float samplingFactor;
+layout(location = 10)
+uniform float bounceStrength;
+layout(location = 11)
+uniform float coneShadowTolerance;
+layout(location = 12)
+uniform float coneShadowAperture;
 
-// TODO: Make these uniforms?
-// Ambient Occlusion alpha
-const float aoAlpha = 0.;
-// AO falloff
-const float aoFalloff = 800.;
-// Maximum tracing distance
-const float maxTracingDistanceGlobal = 0.95;
-const float samplingFactor = 0.03;
-const float bounceStrength = 1.;
-const float coneShadowTolerance = 0.1;
-const float coneShadowAperture = 0.2;
+layout(location = 13)
+uniform lightSource lights[LIGHT_COUNT];
 
 in vec2 textureCoordinates;
 
@@ -131,7 +134,7 @@ vec4 TraceCone(vec3 position, vec3 normal, vec3 direction, float aperture, bool 
     // final results
     vec4 coneSample = vec4(0.);
     float occlusion = 0.;
-    float maxDistance = maxTracingDistanceGlobal * (1. / voxelScale);
+    float maxDistance = maxTracingDistance * (1. / voxelScale);
     float falloff = 0.5 * aoFalloff * voxelScale;
     // out of boundaries check
     float enter = 0.;

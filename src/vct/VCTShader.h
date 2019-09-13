@@ -47,6 +47,13 @@ class VCTShader: public GL::AbstractShaderProgram {
             _worldMinPointUniform = uniformLocation("worldMinPoint");
             _worldMaxPointUniform = uniformLocation("worldMaxPoint");
             _volumeDimensionUniform = uniformLocation("volumeDimension");
+            _aoAlphaUniform = uniformLocation("aoAlpha");
+            _aoFalloffUniform = uniformLocation("aoFalloff");
+            _maxTracingDistanceUniform = uniformLocation("maxTracingDistance");
+            _samplingFactorUniform = uniformLocation("samplingFactor");
+            _bounceStrengthUniform = uniformLocation("bounceStrength");
+            _coneShadowToleranceUniform = uniformLocation("coneShadowTolerance");
+            _coneShadowApertureUniform = uniformLocation("coneShadowAperture");
             _lightsUniform = uniformLocation("lights[0].position");
         }
 
@@ -94,6 +101,41 @@ class VCTShader: public GL::AbstractShaderProgram {
 
         VCTShader& setVolumeDimension(UnsignedInt volumeDimension) {
             setUniform(_volumeDimensionUniform, volumeDimension);
+            return *this;
+        }
+
+        VCTShader& setAOAlpha(Float aoAlpha) {
+            setUniform(_aoAlphaUniform, aoAlpha);
+            return *this;
+        }
+
+        VCTShader& setAOFalloff(Float aoFalloff) {
+            setUniform(_aoFalloffUniform, aoFalloff);
+            return *this;
+        }
+
+        VCTShader& setMaxTracingDistance(Float maxDist) {
+            setUniform(_maxTracingDistanceUniform, maxDist);
+            return *this;
+        }
+
+        VCTShader& setSamplingFactor(Float samplingFactor) {
+            setUniform(_samplingFactorUniform, samplingFactor);
+            return *this;
+        }
+
+        VCTShader& setBounceStrength(Float bounce) {
+            setUniform(_bounceStrengthUniform, bounce);
+            return *this;
+        }
+
+        VCTShader& setConeShadowTolerance(Float coneShadowTolerance) {
+            setUniform(_coneShadowToleranceUniform, coneShadowTolerance);
+            return *this;
+        }
+
+        VCTShader& setConeShadowAperture(Float coneShadowAperture) {
+            setUniform(_coneShadowApertureUniform, coneShadowAperture);
             return *this;
         }
 
@@ -145,6 +187,13 @@ class VCTShader: public GL::AbstractShaderProgram {
             _worldMinPointUniform,
             _worldMaxPointUniform,
             _volumeDimensionUniform,
+            _aoAlphaUniform,
+            _aoFalloffUniform,
+            _maxTracingDistanceUniform,
+            _samplingFactorUniform,
+            _bounceStrengthUniform,
+            _coneShadowToleranceUniform,
+            _coneShadowApertureUniform,
             _lightsUniform;
 
         Int _albedoPos = 0, _normalPos = 1, _specularPos = 2, _emissionPos = 3, _depthPos = 4;
