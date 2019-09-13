@@ -27,6 +27,7 @@ class InjectRadianceShader: public GL::AbstractShaderProgram {
 
             GL::Shader comp{GL::Version::GL430, GL::Shader::Type::Compute};
 
+            comp.addSource(rs.get("common.glsl"));
             comp.addSource(rs.get("InjectRadianceShader.comp"));
 
             CORRADE_INTERNAL_ASSERT_OUTPUT(GL::Shader::compile({comp}));

@@ -61,16 +61,6 @@ void imageAtomicRGBA8Avg(layout(r32ui) volatile coherent uimage3D grid, ivec3 co
     }
 }
 
-vec3 EncodeNormal(vec3 normal)
-{
-    return normal * 0.5f + vec3(0.5f);
-}
-
-vec3 DecodeNormal(vec3 normal)
-{
-    return normal * 2.0f - vec3(1.0f);
-}
-
 void main()
 {
     if( worldPosition.x < triangleAABB.x || worldPosition.y < triangleAABB.y ||

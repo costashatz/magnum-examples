@@ -34,6 +34,7 @@ class VoxelizationShader: public GL::AbstractShaderProgram {
             vert.addSource(rs.get("VoxelizationShader.vert"));
             geom.addSource(rs.get("VoxelizationShader.geom"));
             frag.addSource(isNvidia ? "#define NVIDIA\n" : "");
+            frag.addSource(rs.get("common.glsl"));
             frag.addSource(rs.get("VoxelizationShader.frag"));
 
             CORRADE_INTERNAL_ASSERT_OUTPUT(GL::Shader::compile({vert, geom, frag}));

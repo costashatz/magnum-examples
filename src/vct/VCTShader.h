@@ -29,6 +29,7 @@ class VCTShader: public GL::AbstractShaderProgram {
             GL::Shader frag{GL::Version::GL430, GL::Shader::Type::Fragment};
 
             vert.addSource(rs.get("RenderTextureShader.vert"));
+            frag.addSource(rs.get("common.glsl"));
             frag.addSource(rs.get("VCTShader.frag"));
 
             // Utility::Debug{} << frag.sources()[2].c_str();

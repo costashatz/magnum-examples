@@ -4,19 +4,6 @@
 #define LIGHT_COUNT 1 // define this when compiling the shader
 #endif
 
-struct lightSource
-{
-    vec4 position;
-    vec4 diffuse;
-    vec3 spotDirection;
-    float spotExponent;
-    float spotCutoff;
-    float intensity;
-    float constantAttenuation;
-    float linearAttenuation;
-    float quadraticAttenuation;
-};
-
 layout(binding = 0)
 uniform sampler2D gAlbedo;
 layout(binding = 1)
@@ -51,22 +38,17 @@ uniform uint volumeDimension;
 layout(location = 6)
 uniform lightSource lights[LIGHT_COUNT];
 
-const float PI = 3.14159265f;
-const float HALF_PI = 1.57079f;
-const float EPSILON = 1e-30;
-const float SQRT_3 = 1.73205080f;
-
 // TODO: Make these uniforms?
 // Ambient Occlusion alpha
-const float aoAlpha = 0.f;
+const float aoAlpha = 0.;
 // AO falloff
-const float aoFalloff = 800.0f;
+const float aoFalloff = 800.;
 // Maximum tracing distance
-const float maxTracingDistanceGlobal = 0.95f;
-const float samplingFactor = 0.03f;
-const float bounceStrength = 1.f;
-const float coneShadowTolerance = 0.1f;
-const float coneShadowAperture = 0.2f;
+const float maxTracingDistanceGlobal = 0.95;
+const float samplingFactor = 0.03;
+const float bounceStrength = 1.;
+const float coneShadowTolerance = 0.1;
+const float coneShadowAperture = 0.2;
 
 in vec2 textureCoordinates;
 
@@ -74,34 +56,28 @@ out vec4 color;
 
 const vec3 diffuseConeDirections[] =
 {
-    vec3(0.f, 1.f, 0.f),
-    vec3(0.f, 0.5f, 0.866025f),
-    vec3(0.823639f, 0.5f, 0.267617f),
-    vec3(0.509037f, 0.5f, -0.7006629f),
-    vec3(-0.509037f, 0.5f, -0.7006629f),
-    vec3(-0.823639f, 0.5f, 0.267617f)
+    vec3(0., 1., 0.),
+    vec3(0., 0.5, 0.866025),
+    vec3(0.823639, 0.5, 0.267617),
+    vec3(0.509037, 0.5, -0.7006629),
+    vec3(-0.509037, 0.5, -0.7006629),
+    vec3(-0.823639, 0.5, 0.267617)
 };
 
 const float diffuseConeWeights[] =
 {
-    PI / 4.f,
-    3.f * PI / 20.f,
-    3.f * PI / 20.f,
-    3.f * PI / 20.f,
-    3.f * PI / 20.f,
-    3.f * PI / 20.f
+    M_PI / 4.,
+    3. * M_PI / 20.,
+    3. * M_PI / 20.,
+    3. * M_PI / 20.,
+    3. * M_PI / 20.,
+    3. * M_PI / 20.
 };
-
-vec3 WorldToVoxel(vec3 position)
-{
-    vec3 voxelPos = position - worldMinPoint;
-    return voxelPos * voxelScale;
-}
 
 vec3 PositionFromDepth()
 {
-    float z = texture(gDepth, textureCoordinates).x * 2.f - 1.f;
-    vec4 projected = vec4(textureCoordinates * 2.f - 1.f, z, 1.f);
+    float z = texture(gDepth, textureCoordinates).x * 2. - 1.;
+    vec4 projected = vec4(textureCoordinates * 2. - 1., z, 1.);
     projected = inverseProjectionView * projected;
     return projected.xyz / projected.w;
 }
@@ -109,16 +85,16 @@ vec3 PositionFromDepth()
 vec4 AnisotropicSample(vec3 coord, vec3 weight, uvec3 face, float lod)
 {
     // anisotropic volumes level
-    float anisoLevel = max(lod - 1.0f, 0.0f);
+    float anisoLevel = max(lod - 1., 0.);
     // directional sample
     vec4 anisoSample = weight.x * textureLod(voxelTexMipmap[face.x], coord, anisoLevel)
                      + weight.y * textureLod(voxelTexMipmap[face.y], coord, anisoLevel)
                      + weight.z * textureLod(voxelTexMipmap[face.z], coord, anisoLevel);
     // linearly interpolate on base level
-    if(lod < 1.0f)
+    if(lod < 1.)
     {
         vec4 baseColor = texture(voxelTex, coord);
-        anisoSample = mix(baseColor, anisoSample, clamp(lod, 0.0f, 1.0f));
+        anisoSample = mix(baseColor, anisoSample, clamp(lod, 0., 1.));
     }
 
     return anisoSample;
@@ -133,7 +109,7 @@ bool IntersectRayWithWorldAABB(vec3 ro, vec3 rd, out float enter, out float leav
     vec3 v3Min = min(tempMax, tempMin);
 
     leave = min(v3Max.x, min(v3Max.y, v3Max.z));
-    enter = max(max(v3Min.x, 0.0), max(v3Min.y, v3Min.z));
+    enter = max(max(v3Min.x, 0.), max(v3Min.y, v3Min.z));
 
     return leave > enter;
 }
@@ -141,10 +117,10 @@ bool IntersectRayWithWorldAABB(vec3 ro, vec3 rd, out float enter, out float leav
 vec4 TraceCone(vec3 position, vec3 normal, vec3 direction, float aperture, bool traceOcclusion)
 {
     uvec3 visibleFace;
-    visibleFace.x = (direction.x < 0.0) ? 0 : 1;
-    visibleFace.y = (direction.y < 0.0) ? 2 : 3;
-    visibleFace.z = (direction.z < 0.0) ? 4 : 5;
-    traceOcclusion = traceOcclusion && aoAlpha < 1.0f;
+    visibleFace.x = (direction.x < 0.) ? 0 : 1;
+    visibleFace.y = (direction.y < 0.) ? 2 : 3;
+    visibleFace.z = (direction.z < 0.) ? 4 : 5;
+    traceOcclusion = traceOcclusion && aoAlpha < 1.;
     // world space grid voxel size
     float voxelWorldSize = 2.0 /  (voxelScale * volumeDimension);
     // weight per axis for aniso sampling
@@ -153,36 +129,36 @@ vec4 TraceCone(vec3 position, vec3 normal, vec3 direction, float aperture, bool 
     float dst = voxelWorldSize;
     vec3 startPosition = position + normal * dst;
     // final results
-    vec4 coneSample = vec4(0.0f);
-    float occlusion = 0.0f;
-    float maxDistance = maxTracingDistanceGlobal * (1.0f / voxelScale);
-    float falloff = 0.5f * aoFalloff * voxelScale;
+    vec4 coneSample = vec4(0.);
+    float occlusion = 0.;
+    float maxDistance = maxTracingDistanceGlobal * (1. / voxelScale);
+    float falloff = 0.5 * aoFalloff * voxelScale;
     // out of boundaries check
-    float enter = 0.0;
-    float leave = 0.0;
+    float enter = 0.;
+    float leave = 0.;
 
     if(!IntersectRayWithWorldAABB(position, direction, enter, leave))
     {
-        coneSample.a = 1.0f;
+        coneSample.a = 1.;
     }
 
-    while(coneSample.a < 1.0f && dst <= maxDistance)
+    while(coneSample.a < 1. && dst <= maxDistance)
     {
         vec3 conePosition = startPosition + direction * dst;
         // cone expansion and respective mip level based on diameter
-        float diameter = 2.0f * aperture * dst;
+        float diameter = 2. * aperture * dst;
         float mipLevel = log2(diameter / voxelWorldSize);
         // convert position to texture coord
-        vec3 coord = WorldToVoxel(conePosition);
+        vec3 coord = WorldToVoxel(conePosition, voxelScale, worldMinPoint);
         // get directional sample from anisotropic representation
         vec4 anisoSample = AnisotropicSample(coord, weight, visibleFace, mipLevel);
         // front to back composition
-        // coneSample += (1.0f - coneSample.a) * anisoSample;
-        coneSample += pow(1.0f - coneSample.a, 2.f) * anisoSample * exp(-0.8f * dst * dst / samplingFactor);
+        // coneSample += (1. - coneSample.a) * anisoSample;
+        coneSample += pow(1. - coneSample.a, 2.) * anisoSample * exp(-0.8 * dst * dst / samplingFactor);
         // ambient occlusion
-        if(traceOcclusion && occlusion < 1.0)
+        if(traceOcclusion && occlusion < 1.)
         {
-            occlusion += ((1.0f - occlusion) * anisoSample.a) / (1.0f + falloff * diameter);
+            occlusion += ((1. - occlusion) * anisoSample.a) / (1. + falloff * diameter);
         }
         // move further into volume
         dst += diameter * samplingFactor;
@@ -191,53 +167,54 @@ vec4 TraceCone(vec3 position, vec3 normal, vec3 direction, float aperture, bool 
     return vec4(coneSample.rgb, occlusion);
 }
 
-float TraceShadowCone(vec3 position, vec3 direction, float aperture, float maxTracingDistance) 
+float TraceShadowCone(vec3 position, vec3 direction, float aperture, float maxTracingDistance)
 {
     bool hardShadows = false;
 
-    if(coneShadowTolerance == 1.0f) { hardShadows = true; }
+    if(coneShadowTolerance == 1.) { hardShadows = true; }
 
     // directional dominat axis
     uvec3 visibleFace;
-    visibleFace.x = (direction.x < 0.0) ? 0 : 1;
-    visibleFace.y = (direction.y < 0.0) ? 2 : 3;
-    visibleFace.z = (direction.z < 0.0) ? 4 : 5;
+    visibleFace.x = (direction.x < 0.) ? 0 : 1;
+    visibleFace.y = (direction.y < 0.) ? 2 : 3;
+    visibleFace.z = (direction.z < 0.) ? 4 : 5;
     // world space grid size
-    float voxelWorldSize = 3.f /  (voxelScale * volumeDimension);
+    float voxelWorldSize = 3. /  (voxelScale * volumeDimension);
     // weight per axis for aniso sampling
     vec3 weight = direction * direction;
     // move further to avoid self collision
     float dst = voxelWorldSize;
     vec3 startPosition = position + direction * dst;
     // control vars
-    float mipMaxLevel = log2(volumeDimension) - 1.0f;
+    float mipMaxLevel = log2(volumeDimension) - 1.;
     // final results
-    float visibility = 0.0f;
-    float k = exp2(7.0f * coneShadowTolerance);
+    float visibility = 0.;
+    float k = exp2(7. * coneShadowTolerance);
     // cone will only trace the needed distance
     float maxDistance = maxTracingDistance;
     // out of boundaries check
-    float enter = 0.0; float leave = 0.0;
+    float enter = 0.;
+    float leave = 0.;
 
     if(!IntersectRayWithWorldAABB(position, direction, enter, leave))
     {
-        visibility = 1.0f;
+        visibility = 1.;
     }
-    
-    while(visibility < 1.0f && dst <= maxDistance)
+
+    while(visibility < 1. && dst <= maxDistance)
     {
         vec3 conePosition = startPosition + direction * dst;
-        float diameter = 2.0f * aperture * dst;
+        float diameter = 2. * aperture * dst;
         float mipLevel = log2(diameter / voxelWorldSize);
         // convert position to texture coord
-        vec3 coord = WorldToVoxel(conePosition);
+        vec3 coord = WorldToVoxel(conePosition, voxelScale, worldMinPoint);
         // get directional sample from anisotropic representation
         vec4 anisoSample = AnisotropicSample(coord, weight, visibleFace, mipLevel);
 
         // hard shadows exit as soon cone hits something
-        if(hardShadows && anisoSample.a > EPSILON) { return 0.0f; }  
+        if(hardShadows && anisoSample.a > EPSILON) { return 0.; }
         // accumulate
-        visibility += (1.0f - visibility) * anisoSample.a * k;
+        visibility += (1. - visibility) * anisoSample.a * k;
         // move further into volume
         dst += diameter * samplingFactor;
     }
@@ -247,9 +224,9 @@ float TraceShadowCone(vec3 position, vec3 direction, float aperture, float maxTr
 
 vec4 CalculateIndirectLighting(vec3 position, vec3 normal, vec3 albedo, vec4 specular)
 {
-    vec4 specularTrace = vec4(0.0f);
-    vec4 diffuseTrace = vec4(0.0f);
-    vec3 coneDirection = vec3(0.0f);
+    vec4 specularTrace = vec4(0.);
+    vec4 diffuseTrace = vec4(0.);
+    vec3 coneDirection = vec3(0.);
 
     // component greater than zero
     if(any(greaterThan(specular.rgb, specularTrace.rgb)))
@@ -258,7 +235,7 @@ vec4 CalculateIndirectLighting(vec3 position, vec3 normal, vec3 albedo, vec4 spe
         vec3 coneDirection = reflect(-viewDirection, normal);
         coneDirection = normalize(coneDirection);
         // specular cone setup, minimum of 1 grad, fewer can severly slow down performance
-        float aperture = clamp(tan(HALF_PI * (1.0f - specular.a)), 0.0174533f, PI);
+        float aperture = clamp(tan(M_PI_2 * (1. - specular.a)), 0.0174533, M_PI);
         specularTrace = TraceCone(position, normal, coneDirection, aperture, false);
         specularTrace.rgb *= specular.rgb;
     }
@@ -267,12 +244,12 @@ vec4 CalculateIndirectLighting(vec3 position, vec3 normal, vec3 albedo, vec4 spe
     if(any(greaterThan(albedo, diffuseTrace.rgb)))
     {
         // diffuse cone setup
-        const float aperture = 0.57735f; //0.325f;
-        vec3 guide = vec3(0.0f, 1.0f, 0.0f);
+        const float aperture = 0.57735; //0.325;
+        vec3 guide = vec3(0., 1., 0.);
 
-        if (abs(dot(normal, guide)) == 1.0f)
+        if (abs(dot(normal, guide)) == 1.)
         {
-            guide = vec3(0.0f, 0.0f, 1.0f);
+            guide = vec3(0., 0., 1.);
         }
 
         // Find a tangent and a bitangent
@@ -294,7 +271,7 @@ vec4 CalculateIndirectLighting(vec3 position, vec3 normal, vec3 albedo, vec4 spe
 
     vec3 result = bounceStrength * (diffuseTrace.rgb + specularTrace.rgb);
 
-    return vec4(result, clamp(1.0f - diffuseTrace.a + aoAlpha, 0.0f, 1.0f));
+    return vec4(result, clamp(1. - diffuseTrace.a + aoAlpha, 0., 1.));
 }
 
 // albedo should contain: material*lightDiffuse
@@ -304,74 +281,41 @@ vec3 BRDF(vec3 lightDirection, vec3 normal, vec3 albedo)
     float intensity = dot(normal, lightDirection);
 
     /* Diffuse color */
-    return albedo * max(0.0, intensity);
+    return albedo * max(0., intensity);
 }
 
-vec4 CalculateDirectLighting(vec3 position, vec3 normal, vec3 albedo)
+vec3 CalculateDirectLighting(vec3 position, vec3 normal, vec3 albedo)
 {
     vec3 normalizedNormal = normalize(normal);
     // calculate directional lighting
-    vec4 directLighting = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-    vec4 current =  vec4(0.0f);
+    vec3 directLighting = vec3(0.);
+    vec3 current =  vec3(0.);
     int count = 0;
 
     for(int i = 0; i != LIGHT_COUNT; ++i) {
         vec3 lightDirection;
         float attenuation;
-        float visibility = 1.f;
+        float visibility = 1.;
 
-        float shadowMaxDist = 1.f;
+        float shadowMaxDist = 1.;
 
-        /* Directional light */
-        if(lights[i].position.w == 0.0) {
-            attenuation = 1.0;
-            lightDirection = normalize(-vec3(lights[i].position));
-        }
-        /* Pointlight or Spotlight */
+        getLightValues(lights[i], position, lightDirection, attenuation);
+
+        if(attenuation <= 0.)
+            current = vec3(0.);
         else {
-            lightDirection = vec3(lights[i].position) - position;
-
-            float dist = length(lightDirection);
-
-            attenuation = lights[i].intensity / (lights[i].constantAttenuation +
-                                                    dist * (lights[i].linearAttenuation + dist * lights[i].quadraticAttenuation));
-
-            lightDirection = normalize(lightDirection);
-
-            shadowMaxDist = dist;
-
-            /* Spotlight */
-            if(lights[i].spotCutoff < PI / 2.f) {
-                float clampedCosine = max(0.0, dot(-lightDirection, lights[i].spotDirection));
-                /* Outsise of spotlight cone? */
-                if(clampedCosine < cos(lights[i].spotCutoff)) {
-                    attenuation = 0.0;
-                }
-                else {
-                    attenuation = attenuation * pow(clampedCosine, lights[i].spotExponent);
-                }
-            }
-        }
-
-        if(attenuation <= 0.f)
-            current = vec4(0.f);
-        else {
-            // vec3 coord = WorldToVoxel(position);
+            // vec3 coord = WorldToVoxel(position, voxelScale, worldMinPoint);
             // visibility = max(0.0f, texture(voxelVisibility, coord).a);
             visibility = TraceShadowCone(position, lightDirection, coneShadowAperture, shadowMaxDist);
-            if(visibility <= 0.f)
-                current = vec4(0.f);
+            if(visibility <= 0.)
+                current = vec3(0.);
             else
-                current = vec4(BRDF(lightDirection, normalizedNormal, visibility * attenuation * lights[i].diffuse.rgb * albedo), visibility);
+                current = BRDF(lightDirection, normalizedNormal, visibility * attenuation * lights[i].diffuse.rgb * albedo);
         }
 
 
-        directLighting.rgb += current.rgb;
-        directLighting.a += current.a;
-        count++;
+        directLighting += current;
     }
-
-    if(count > 0) { directLighting.a /= count; }
 
     return directLighting;
 }
@@ -387,33 +331,32 @@ void main()
     // fragment albedo
     vec3 baseColor = texture(gAlbedo, textureCoordinates).rgb;
     // convert to linear space
-    vec3 albedo = pow(baseColor, vec3(2.2f));
+    vec3 albedo = pow(baseColor, vec3(2.2));
     // fragment emissiviness
     vec3 emissive = texture(gEmissive, textureCoordinates).rgb;
 
     // lighting cumulatives
-    vec3 directLighting = vec3(0.0f);
+    vec3 directLighting = vec3(0.);
     // rgb, a = ambient occlusion
-    vec4 indirectLighting = vec4(1.0f);
+    vec4 indirectLighting = vec4(1.);
 
     indirectLighting = CalculateIndirectLighting(position, normal, baseColor, specular);
-    vec4 dirLight = CalculateDirectLighting(position, normal, albedo);
-    directLighting = dirLight.rgb;
+    directLighting = CalculateDirectLighting(position, normal, albedo);
 
     // convert indirect to linear space
-    indirectLighting.rgb = pow(indirectLighting.rgb, vec3(2.2f));
+    indirectLighting.rgb = pow(indirectLighting.rgb, vec3(2.2));
     // final composite lighting (direct + indirect) * ambient occlusion
     vec3 compositeLighting = (directLighting + indirectLighting.rgb) * indirectLighting.a;
     compositeLighting += emissive;
-    // compositeLighting.rgb = vec3(1.f - indirectLighting.a);
+    // compositeLighting.rgb = vec3(1. - indirectLighting.a);
     // -- this could be done in a post-process pass --
 
     // Reinhard tone mapping
-    compositeLighting = compositeLighting / (compositeLighting + 1.0f);
+    compositeLighting = compositeLighting / (compositeLighting + 1.);
     // gamma correction
     const float gamma = 2.2;
     // convert to gamma space
-    compositeLighting = pow(compositeLighting, vec3(1.0 / gamma));
+    compositeLighting = pow(compositeLighting, vec3(1. / gamma));
 
-    color = vec4(compositeLighting, 1.0f);
+    color = vec4(compositeLighting, 1.);
 }
