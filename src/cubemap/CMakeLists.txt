@@ -27,15 +27,16 @@
 #   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.4)
 
-project(MagnumCubeMapExample)
+project(MagnumCubeMapExample CXX)
 
 # Add module path in case this is project root
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/../../modules/" ${CMAKE_MODULE_PATH})
 endif()
 
+find_package(Corrade REQUIRED Main)
 find_package(Magnum REQUIRED
     GL
     MeshTools
@@ -53,7 +54,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
 
 corrade_add_resource(CubeMap_RESOURCES resources.conf)
 
-add_executable(magnum-cubemap
+add_executable(magnum-cubemap WIN32
     CubeMap.cpp
     CubeMapExample.cpp
     CubeMapShader.cpp
@@ -70,6 +71,7 @@ add_executable(magnum-cubemap
     ${CubeMap_RESOURCES})
 target_include_directories(magnum-cubemap PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(magnum-cubemap PRIVATE
+    Corrade::Main
     Magnum::Application
     Magnum::GL
     Magnum::Magnum
@@ -80,3 +82,6 @@ target_link_libraries(magnum-cubemap PRIVATE
 
 install(TARGETS magnum-cubemap DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
 install(FILES +x.jpg +y.jpg +z.jpg -x.jpg -y.jpg -z.jpg DESTINATION ${MAGNUM_DATA_INSTALL_DIR}/examples/cubemap)
+
+# Make the executable a default target to build & run in Visual Studio
+set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT magnum-cubemap)

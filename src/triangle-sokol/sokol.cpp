@@ -27,9 +27,10 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h>
 #include <Corrade/Utility/Assert.h>
 #include <Corrade/Utility/Debug.h>
+
+#include "flextGL.h"
 
 /* Integrate with Magnum a bit */
 #define SOKOL_ASSERT(c) CORRADE_INTERNAL_ASSERT(c)
@@ -38,4 +39,3 @@
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33
 #include "sokol_gfx.h"
-

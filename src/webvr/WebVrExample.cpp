@@ -35,7 +35,8 @@
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>
-#include <Magnum/Math/Vector3.h>
+#include <Magnum/Math/Color.h>
+#include <Magnum/Math/Matrix4.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/MeshTools/CompressIndices.h>
 #include <Magnum/MeshTools/Interleave.h>
@@ -269,7 +270,7 @@ void WebVrExample::displayRender() {
         for (int i = 0; i < 4; ++i) {
             const Matrix4& transformationMatrix = _cubeModelMatrices[i];
             _shader.setTransformationMatrix(viewMatrix[eye]*transformationMatrix)
-                .setNormalMatrix((viewMatrix[eye]*transformationMatrix).rotationScaling())
+                .setNormalMatrix((viewMatrix[eye]*transformationMatrix).normalMatrix())
                 .setDiffuseColor(_cubeColors[i]);
             _mesh.draw(_shader);
         }

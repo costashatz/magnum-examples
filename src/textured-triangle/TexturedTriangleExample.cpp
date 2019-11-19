@@ -30,6 +30,7 @@
 #include <Corrade/Containers/ArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Resource.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
@@ -94,7 +95,7 @@ TexturedTriangleExample::TexturedTriangleExample(const Arguments& arguments):
     _texture.setWrapping(GL::SamplerWrapping::ClampToEdge)
         .setMagnificationFilter(GL::SamplerFilter::Linear)
         .setMinificationFilter(GL::SamplerFilter::Linear)
-        .setStorage(1, GL::TextureFormat::RGB8, image->size())
+        .setStorage(1, GL::textureFormat(image->format()), image->size())
         .setSubImage(0, {}, *image);
 }
 

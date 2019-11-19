@@ -31,6 +31,8 @@
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>
+#include <Magnum/Math/Color.h>
+#include <Magnum/Math/Matrix4.h>
 #include <Magnum/MeshTools/Interleave.h>
 #include <Magnum/MeshTools/CompressIndices.h>
 #include <Magnum/Platform/Sdl2Application.h>
@@ -56,7 +58,6 @@ class PrimitivesExample: public Platform::Application {
         Shaders::Phong _shader;
 
         Matrix4 _transformation, _projection;
-        Vector2i _previousMousePosition;
         Color3 _color;
 };
 
@@ -104,7 +105,7 @@ void PrimitivesExample::drawEvent() {
         .setDiffuseColor(_color)
         .setAmbientColor(Color3::fromHsv({_color.hue(), 1.0f, 0.3f}))
         .setTransformationMatrix(_transformation)
-        .setNormalMatrix(_transformation.rotationScaling())
+        .setNormalMatrix(_transformation.normalMatrix())
         .setProjectionMatrix(_projection);
     _mesh.draw(_shader);
 
@@ -114,7 +115,6 @@ void PrimitivesExample::drawEvent() {
 void PrimitivesExample::mousePressEvent(MouseEvent& event) {
     if(event.button() != MouseEvent::Button::Left) return;
 
-    _previousMousePosition = event.position();
     event.setAccepted();
 }
 
@@ -128,16 +128,13 @@ void PrimitivesExample::mouseReleaseEvent(MouseEvent& event) {
 void PrimitivesExample::mouseMoveEvent(MouseMoveEvent& event) {
     if(!(event.buttons() & MouseMoveEvent::Button::Left)) return;
 
-    const Vector2 delta = 3.0f*
-        Vector2{event.position() - _previousMousePosition}/
-        Vector2{GL::defaultFramebuffer.viewport().size()};
+    Vector2 delta = 3.0f*Vector2{event.relativePosition()}/Vector2{windowSize()};
 
     _transformation =
         Matrix4::rotationX(Rad{delta.y()})*
         _transformation*
         Matrix4::rotationY(Rad{delta.x()});
 
-    _previousMousePosition = event.position();
     event.setAccepted();
     redraw();
 }

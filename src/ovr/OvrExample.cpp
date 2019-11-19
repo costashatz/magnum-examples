@@ -39,6 +39,8 @@
 #include <Magnum/GL/Renderbuffer.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureFormat.h>
+#include <Magnum/Math/Color.h>
+#include <Magnum/Math/Matrix4.h>
 #include <Magnum/MeshTools/CompressIndices.h>
 #include <Magnum/MeshTools/Interleave.h>
 #include <Magnum/Platform/Sdl2Application.h>
@@ -213,7 +215,7 @@ void OvrExample::drawEvent() {
         for(Int cubeIndex = 0; cubeIndex < CubeCount; ++cubeIndex) {
             _shader.setDiffuseColor(_cubeColors[cubeIndex])
                 .setTransformationMatrix(_cubeTransforms[cubeIndex])
-                .setNormalMatrix(_cubeTransforms[cubeIndex].rotationScaling())
+                .setNormalMatrix(_cubeTransforms[cubeIndex].normalMatrix())
                 .setProjectionMatrix(viewProjMatrix);
             _mesh.draw(_shader);
         }

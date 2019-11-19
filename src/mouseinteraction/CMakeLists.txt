@@ -28,15 +28,16 @@
 #   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.4)
 
-project(MagnumMouseInteractionExample)
+project(MagnumMouseInteractionExample CXX)
 
 # Add module path in case this is project root
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/../../modules/" ${CMAKE_MODULE_PATH})
 endif()
 
+find_package(Corrade REQUIRED Main)
 find_package(Magnum REQUIRED
     GL
     MeshTools
@@ -47,8 +48,9 @@ find_package(Magnum REQUIRED
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
-add_executable(magnum-mouseinteraction MouseInteractionExample.cpp)
+add_executable(magnum-mouseinteraction WIN32 MouseInteractionExample.cpp)
 target_link_libraries(magnum-mouseinteraction PRIVATE
+    Corrade::Main
     Magnum::Application
     Magnum::GL
     Magnum::Magnum
@@ -58,3 +60,6 @@ target_link_libraries(magnum-mouseinteraction PRIVATE
     Magnum::Shaders)
 
 install(TARGETS magnum-mouseinteraction DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
+
+# Make the executable a default target to build & run in Visual Studio
+set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT magnum-mouseinteraction)

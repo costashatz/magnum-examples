@@ -48,6 +48,7 @@
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/GL/Version.h>
+#include <Magnum/Math/Matrix4.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Shaders/Flat.h>
 #include <Magnum/Text/Alignment.h>
@@ -454,7 +455,7 @@ void AreaLightsExample::drawEvent() {
             .setTransformationMatrix(_transformation)
             .setProjectionMatrix(_projection)
             .setViewMatrix(_view)
-            .setNormalMatrix(_transformation.rotationScaling())
+            .setNormalMatrix(_transformation.normalMatrix())
             .setViewPosition(_view.invertedRigid().translation())
             .setLightQuad(quadPoints)
             .setBaseColor(_lightColor[i])

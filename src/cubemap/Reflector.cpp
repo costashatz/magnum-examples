@@ -51,9 +51,7 @@
 
 namespace Magnum { namespace Examples {
 
-Reflector::Reflector(Object3D* parent, SceneGraph::DrawableGroup3D* group): Object3D(parent), SceneGraph::Drawable3D(*this, group) {
-    CubeMapResourceManager& resourceManager = CubeMapResourceManager::instance();
-
+Reflector::Reflector(CubeMapResourceManager& resourceManager, Object3D* parent, SceneGraph::DrawableGroup3D* group): Object3D(parent), SceneGraph::Drawable3D(*this, group) {
     /* Sphere mesh */
     if(!(_sphere = resourceManager.get<GL::Mesh>("sphere"))) {
         Trade::MeshData3D sphereData = Primitives::uvSphereSolid(16, 32, Primitives::UVSphereTextureCoords::Generate);
@@ -109,7 +107,7 @@ Reflector::Reflector(Object3D* parent, SceneGraph::DrawableGroup3D* group): Obje
 
 void Reflector::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     _shader->setTransformationMatrix(transformationMatrix)
-        .setNormalMatrix(transformationMatrix.rotationScaling())
+        .setNormalMatrix(transformationMatrix.normalMatrix())
         .setProjectionMatrix(camera.projectionMatrix())
         .setReflectivity(2.0f)
         .setDiffuseColor(Color3(0.3f))

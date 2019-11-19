@@ -40,6 +40,7 @@
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/Math/Constants.h>
+#include <Magnum/Math/Color.h>
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Platform/Sdl2Application.h>
@@ -104,7 +105,7 @@ class ColoredDrawable: public SceneGraph::Drawable3D {
             _shader.setDiffuseColor(_color)
                 .setTransformationMatrix(transformation*_primitiveTransformation)
                 .setProjectionMatrix(camera.projectionMatrix())
-                .setNormalMatrix(transformation.rotationScaling());
+                .setNormalMatrix(transformation.normalMatrix());
             _mesh.draw(_shader);
         }
 
