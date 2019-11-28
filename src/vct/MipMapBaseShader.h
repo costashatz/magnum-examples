@@ -51,7 +51,8 @@ class MipMapBaseShader: public GL::AbstractShaderProgram {
 
         MipMapBaseShader& bindMipMapTextures(GL::Texture3D* texs) {
             for(UnsignedInt i = 0; i < 6; i++)
-                texs[i].bindImage(_mipMapPos + i, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+                texs[i].bindImageLayered(_mipMapPos + i, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+                // texs[i].bindImage(_mipMapPos + i, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
             return *this;
         }
 

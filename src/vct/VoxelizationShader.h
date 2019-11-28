@@ -34,6 +34,7 @@ class VoxelizationShader: public GL::AbstractShaderProgram {
             vert.addSource(rs.get("VoxelizationShader.vert"));
             geom.addSource(rs.get("VoxelizationShader.geom"));
             frag.addSource(isNvidia ? "#define NVIDIA\n" : "");
+            frag.addSource("#extension GL_ARB_shader_image_load_store : require\n");
             frag.addSource(rs.get("common.glsl"));
             frag.addSource(rs.get("VoxelizationShader.frag"));
 
@@ -107,17 +108,20 @@ class VoxelizationShader: public GL::AbstractShaderProgram {
         }
 
         VoxelizationShader& bindAlbedoTexture(GL::Texture3D& albedo) {
-            albedo.bindImage(_albedoPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
+            // albedo.bindImage(_albedoPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
+            albedo.bindImageLayered(_albedoPos, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
             return *this;
         }
 
         VoxelizationShader& bindNormalTexture(GL::Texture3D& normal) {
-            normal.bindImage(_normalPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
+            // normal.bindImage(_normalPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
+            normal.bindImageLayered(_normalPos, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
             return *this;
         }
 
         VoxelizationShader& bindEmissionTexture(GL::Texture3D& emission) {
-            emission.bindImage(_emissionPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
+            // emission.bindImage(_emissionPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
+            emission.bindImageLayered(_emissionPos, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::R32UI);
             return *this;
         }
 

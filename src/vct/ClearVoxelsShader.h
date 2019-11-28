@@ -37,22 +37,26 @@ class ClearVoxelsShader: public GL::AbstractShaderProgram {
         }
 
         ClearVoxelsShader& bindAlbedoTexture(GL::Texture3D& albedo) {
-            albedo.bindImage(_albedoPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::RGBA8);
+            // albedo.bindImage(_albedoPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::RGBA8);
+            albedo.bindImageLayered(_albedoPos, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::RGBA8);
             return *this;
         }
 
         ClearVoxelsShader& bindNormalTexture(GL::Texture3D& normal) {
-            normal.bindImage(_normalPos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            // normal.bindImage(_normalPos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            normal.bindImageLayered(_normalPos, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
             return *this;
         }
 
         ClearVoxelsShader& bindEmissionTexture(GL::Texture3D& emission) {
-            emission.bindImage(_emissionPos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            // emission.bindImage(_emissionPos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            emission.bindImageLayered(_emissionPos, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
             return *this;
         }
 
         ClearVoxelsShader& bindRadianceTexture(GL::Texture3D& radiance) {
-            radiance.bindImage(_radiancePos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            // radiance.bindImage(_radiancePos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            radiance.bindImageLayered(_radiancePos, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
             return *this;
         }
 

@@ -55,7 +55,8 @@ class VoxelVisualizationShader: public GL::AbstractShaderProgram {
         }
 
         VoxelVisualizationShader& bindVoxelTexture(GL::Texture3D& voxel, Int level = 0) {
-            voxel.bindImage(_voxelPos, level, 0, GL::ImageAccess::ReadOnly, GL::ImageFormat::RGBA8);
+            // voxel.bindImage(_voxelPos, level, 0, GL::ImageAccess::ReadOnly, GL::ImageFormat::RGBA8);
+            voxel.bindImageLayered(_voxelPos, level, GL::ImageAccess::ReadOnly, GL::ImageFormat::RGBA8);
             return *this;
         }
 

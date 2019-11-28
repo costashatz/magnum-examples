@@ -58,7 +58,8 @@ class MipMapVolumeShader: public GL::AbstractShaderProgram {
 
         MipMapVolumeShader& bindMipMapDestTextures(GL::Texture3D* texs, Int level) {
             for(UnsignedInt i = 0; i < 6; i++)
-                texs[i].bindImage(_mipMapDestPos + i, level, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+                texs[i].bindImageLayered(_mipMapDestPos + i, level, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+                // texs[i].bindImage(_mipMapDestPos + i, level, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
             return *this;
         }
 

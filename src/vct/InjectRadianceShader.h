@@ -27,6 +27,7 @@ class InjectRadianceShader: public GL::AbstractShaderProgram {
 
             GL::Shader comp{GL::Version::GL430, GL::Shader::Type::Compute};
 
+            comp.addSource("#extension GL_ARB_shader_image_load_store : require\n");
             comp.addSource(rs.get("common.glsl"));
             comp.addSource(rs.get("InjectRadianceShader.comp"));
 
@@ -93,17 +94,20 @@ class InjectRadianceShader: public GL::AbstractShaderProgram {
         }
 
         InjectRadianceShader& bindNormalTexture(GL::Texture3D& normal) {
-            normal.bindImage(_normalPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::RGBA8);
+            // normal.bindImage(_normalPos, 0, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::RGBA8);
+            normal.bindImageLayered(_normalPos, 0, GL::ImageAccess::ReadWrite, GL::ImageFormat::RGBA8);
             return *this;
         }
 
         InjectRadianceShader& bindEmissionTexture(GL::Texture3D& emission) {
-            emission.bindImage(_emissionPos, 0, 0, GL::ImageAccess::ReadOnly, GL::ImageFormat::RGBA8);
+            // emission.bindImage(_emissionPos, 0, 0, GL::ImageAccess::ReadOnly, GL::ImageFormat::RGBA8);
+            emission.bindImageLayered(_emissionPos, 0, GL::ImageAccess::ReadOnly, GL::ImageFormat::RGBA8);
             return *this;
         }
 
         InjectRadianceShader& bindRadianceTexture(GL::Texture3D& radiance) {
-            radiance.bindImage(_radiancePos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            // radiance.bindImage(_radiancePos, 0, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
+            radiance.bindImageLayered(_radiancePos, 0, GL::ImageAccess::WriteOnly, GL::ImageFormat::RGBA8);
             return *this;
         }
 

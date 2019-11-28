@@ -80,7 +80,7 @@ class VoxelizedObject: public Object3D, SceneGraph::Drawable3D {
         virtual void draw(const Matrix4&, SceneGraph::Camera3D&) {
             Matrix4 tr = absoluteTransformationMatrix();
             _voxelizationShader.setTransformationMatrix(tr)
-                .setNormalMatrix(tr.rotationScaling())
+                .setNormalMatrix(tr.normalMatrix())
                 .setDiffuseColor(_color)
                 .setEmissiveColor(Color3{0.f, 0.f, 0.f});
             // if(_color.r() == 1.f && _color.g() == 0.f)
@@ -101,7 +101,7 @@ class GeometryObject: public Object3D, SceneGraph::Drawable3D {
         virtual void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
             Matrix4 tr = transformationMatrix;
             _geometryShader.setTransformationMatrix(camera.projectionMatrix() * tr)
-                .setNormalMatrix(absoluteTransformationMatrix().rotationScaling()) // We need normal in world frame
+                .setNormalMatrix(absoluteTransformationMatrix().normalMatrix()) // We need normal in world frame
                 .setDiffuseColor(_color)
                 .setSpecularColor(Color3{0.f, 0.f, 0.f})
                 .setShininess(0.f)
@@ -114,23 +114,6 @@ class GeometryObject: public Object3D, SceneGraph::Drawable3D {
         Color3 _color;
         GL::Mesh& _mesh;
         GeometryShader& _geometryShader;
-};
-
-class ColoredObject: public Object3D, SceneGraph::Drawable3D {
-    public:
-        explicit ColoredObject(const Color4& color, GL::Mesh& mesh, Shaders::Flat3D& shader, Object3D& parent, SceneGraph::DrawableGroup3D& drawables): Object3D{&parent}, SceneGraph::Drawable3D{*this, &drawables}, _color{color}, _mesh(mesh), _shader(shader) {}
-
-    private:
-        virtual void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
-            Matrix4 tr = camera.projectionMatrix() * transformationMatrix * Matrix4::scaling({0.2f, 0.2f, 0.2f});
-            _shader.setTransformationProjectionMatrix(tr)
-                .setColor(_color);
-            _mesh.draw(_shader);
-        }
-
-        Color4 _color;
-        GL::Mesh& _mesh;
-        Shaders::Flat3D& _shader;
 };
 
 class VCTExample: public Platform::Application {
@@ -153,7 +136,7 @@ class VCTExample: public Platform::Application {
         Object3D* _cameraObject, *_manipulator;
         Vector3 _previousPosition;
         SceneGraph::Camera3D* _camera;
-        SceneGraph::DrawableGroup3D _voxelized, _colored, _geometry;
+        SceneGraph::DrawableGroup3D _voxelized, _geometry;
 
         GL::Mesh _sphere, _cube, _floor, _debugVoxelsMesh;
         VoxelizationShader _voxelizationShader;

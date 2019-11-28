@@ -1,5 +1,4 @@
 // #version 430
-#extension GL_ARB_shader_image_load_store : require
 
 in vec3 intPosition;
 in vec3 worldPosition;
@@ -20,18 +19,18 @@ uniform vec3 emissiveColor;
 
 vec4 convRGBA8ToVec4(uint val)
 {
-    return vec4(float((val & 0x000000FF)),
-    float((val & 0x0000FF00) >> 8U),
-    float((val & 0x00FF0000) >> 16U),
-    float((val & 0xFF000000) >> 24U));
+    return vec4(float((val & uint(0x000000FF))),
+    float((val & uint(0x0000FF00)) >> 8U),
+    float((val & uint(0x00FF0000)) >> 16U),
+    float((val & uint(0xFF000000)) >> 24U));
 }
 
 uint convVec4ToRGBA8(vec4 val)
 {
-    return (uint(val.w) & 0x000000FF) << 24U |
-    (uint(val.z) & 0x000000FF) << 16U |
-    (uint(val.y) & 0x000000FF) << 8U |
-    (uint(val.x) & 0x000000FF);
+    return (uint(val.w) & uint(0x000000FF)) << 24U |
+    (uint(val.z) & uint(0x000000FF)) << 16U |
+    (uint(val.y) & uint(0x000000FF)) << 8U |
+    (uint(val.x) & uint(0x000000FF));
 }
 
 #ifndef NVIDIA
