@@ -142,8 +142,16 @@ class VCTExample: public Platform::Application {
         void initTextures();
         void initGeometryBuffer();
 
+        void mousePressEvent(MouseEvent& event) override;
+        void mouseReleaseEvent(MouseEvent& event) override;
+        void mouseMoveEvent(MouseMoveEvent& event) override;
+        void mouseScrollEvent(MouseScrollEvent& event) override;
+
+        Vector3 positionOnSphere(const Vector2i& position) const;
+
         Scene3D _scene;
-        Object3D* _cameraObject;
+        Object3D* _cameraObject, *_manipulator;
+        Vector3 _previousPosition;
         SceneGraph::Camera3D* _camera;
         SceneGraph::DrawableGroup3D _voxelized, _colored, _geometry;
 
@@ -217,14 +225,16 @@ VCTExample::VCTExample(const Arguments& arguments):
     Color4 green = {0.f, 1.f, 0.f, 1.f};
     Color4 yellow = {1.f, 1.f, 0.f, 1.f};
 
-    (new VoxelizedObject(green, _cube, _voxelizationShader, _scene, _voxelized))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25._degf); // .rotateYLocal(25._degf).rotateZLocal(-15._degf);
-    (new GeometryObject(green.rgb(), _cube, _geometryShader, _scene, _geometry))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25._degf); // .rotateYLocal(25._degf).rotateZLocal(-15._degf);
+    _manipulator = new Object3D{&_scene};
 
-    (new VoxelizedObject(red, _sphere, _voxelizationShader, _scene, _voxelized))->translate({0.f, 0.f, 0.2f});
-    (new GeometryObject(red.rgb(), _sphere, _geometryShader, _scene, _geometry))->translate({0.f, 0.f, 0.2f});
+    (new VoxelizedObject(green, _cube, _voxelizationShader, *_manipulator, _voxelized))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25._degf); // .rotateYLocal(25._degf).rotateZLocal(-15._degf);
+    (new GeometryObject(green.rgb(), _cube, _geometryShader, *_manipulator, _geometry))->translate({-0.44f, 0.f, -0.3f}).rotateYLocal(25._degf); // .rotateYLocal(25._degf).rotateZLocal(-15._degf);
 
-    (new VoxelizedObject(yellow, _floor, _voxelizationShader, _scene, _voxelized))->translate({0.f, -0.5f, 0.f});
-    (new GeometryObject(yellow.rgb(), _floor, _geometryShader, _scene, _geometry))->translate({0.f, -0.5f, 0.f});
+    (new VoxelizedObject(red, _sphere, _voxelizationShader, *_manipulator, _voxelized))->translate({0.f, 0.f, 0.2f});
+    (new GeometryObject(red.rgb(), _sphere, _geometryShader, *_manipulator, _geometry))->translate({0.f, 0.f, 0.2f});
+
+    (new VoxelizedObject(yellow, _floor, _voxelizationShader, *_manipulator, _voxelized))->translate({0.f, -0.5f, 0.f});
+    (new GeometryObject(yellow.rgb(), _floor, _geometryShader, *_manipulator, _geometry))->translate({0.f, -0.5f, 0.f});
 
     /* Configure camera */
     _cameraObject = new Object3D{&_scene};
@@ -270,7 +280,7 @@ void VCTExample::drawEvent() {
         .bindRadianceTexture(_radianceTexture);
     UnsignedInt sz = std::ceil(_volumeDimension / 8.f);
     _clearVoxelsShader.dispatchCompute({sz, sz, sz});
-    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch | GL::Renderer::MemoryBarrier::ShaderStorage);
 
     /* Voxelize scene */
     _voxelizationShader.setVolumeDimension(static_cast<UnsignedInt>(_volumeDimension))
@@ -283,14 +293,14 @@ void VCTExample::drawEvent() {
         .bindEmissionTexture(_emissionTexture);
     _camera->draw(_voxelized);
 
-    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch | GL::Renderer::MemoryBarrier::ShaderStorage);
 
     /* Inject light information into voxelized texture */
     _injectRadianceShader.setVolumeDimension(_volumeDimension)
         .setVoxelScale(_voxelScale)
         .setVoxelSize(_voxelSize)
         .setMinPoint(_minPoint)
-        .setTraceShadowHit(0.4f)
+        .setTraceShadowHit(0.2f)
         .bindAlbedoTexture(_albedoTexture)
         .bindNormalTexture(_normalTexture)
         .bindEmissionTexture(_emissionTexture)
@@ -298,7 +308,7 @@ void VCTExample::drawEvent() {
         .setLight();
     sz = std::ceil(_volumeDimension / 8.f);
     _injectRadianceShader.dispatchCompute({sz, sz, sz});
-    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch | GL::Renderer::MemoryBarrier::ShaderStorage);
 
     /* Generate MipMapBase */
     UnsignedInt mipDimension = _volumeDimension / 2;
@@ -307,7 +317,7 @@ void VCTExample::drawEvent() {
         .bindMipMapTextures(_voxelTextures);
     sz = std::ceil(mipDimension / 8.f);
     _mipMapBaseShader.dispatchCompute({sz, sz, sz});
-    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+    GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch | GL::Renderer::MemoryBarrier::ShaderStorage);
 
     /* Generate MipMapVolume */
     mipDimension = _volumeDimension / 4;
@@ -319,7 +329,7 @@ void VCTExample::drawEvent() {
             .bindMipMapDestTextures(_voxelTextures, mipMapLevel + 1);
         sz = std::ceil(mipDimension / 8.f);
         _mipMapBaseShader.dispatchCompute({sz, sz, sz});
-        GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+        GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch | GL::Renderer::MemoryBarrier::ShaderStorage);
         mipMapLevel++;
         mipDimension /= 2;
     }
@@ -373,7 +383,7 @@ void VCTExample::drawEvent() {
 
     // _debugVoxelsMesh.draw(_voxelVisualizationShader);
 
-    // GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch);
+    // GL::Renderer::setMemoryBarrier(GL::Renderer::MemoryBarrier::ShaderImageAccess | GL::Renderer::MemoryBarrier::TextureFetch | GL::Renderer::MemoryBarrier::ShaderStorage);
 
     // _renderTextureShader.bindOutputTexture(_geometryDepthTexture);
     // _renderTextureShader.setDepth(1);
@@ -395,7 +405,7 @@ void VCTExample::drawEvent() {
         .setMaxTracingDistance(0.95f)
         .setSamplingFactor(0.03f)
         .setBounceStrength(1.f)
-        .setConeShadowTolerance(0.1f)
+        .setConeShadowTolerance(0.5f)
         .setConeShadowAperture(0.2f)
         .bindAlbedoTexture(_geometryAlbedoTexture)
         .bindNormalTexture(_geometryNormalTexture)
@@ -490,6 +500,50 @@ void VCTExample::initGeometryBuffer() {
                             {1, GL::Framebuffer::ColorAttachment(1)},
                             {2, GL::Framebuffer::ColorAttachment(2)},
                             {3, GL::Framebuffer::ColorAttachment(3)}});
+}
+
+void VCTExample::mousePressEvent(MouseEvent& event) {
+    if(event.button() == MouseEvent::Button::Left)
+        _previousPosition = positionOnSphere(event.position());
+}
+
+void VCTExample::mouseReleaseEvent(MouseEvent& event) {
+    if(event.button() == MouseEvent::Button::Left)
+        _previousPosition = Vector3();
+}
+
+void VCTExample::mouseScrollEvent(MouseScrollEvent& event) {
+    if(!event.offset().y()) return;
+
+    /* Distance to origin */
+    const Float distance = _cameraObject->transformation().translation().z();
+
+    /* Move 15% of the distance back or forward */
+    _cameraObject->translate(Vector3::zAxis(
+        distance*(1.0f - (event.offset().y() > 0 ? 1/0.85f : 0.85f))));
+
+    redraw();
+}
+
+Vector3 VCTExample::positionOnSphere(const Vector2i& position) const {
+    const Vector2 positionNormalized = Vector2{position}/Vector2{_camera->viewport()} - Vector2{0.5f};
+    const Float length = positionNormalized.length();
+    const Vector3 result(length > 1.0f ? Vector3(positionNormalized, 0.0f) : Vector3(positionNormalized, 1.0f - length));
+    return (result*Vector3::yScale(-1.0f)).normalized();
+}
+
+void VCTExample::mouseMoveEvent(MouseMoveEvent& event) {
+    if(!(event.buttons() & MouseMoveEvent::Button::Left)) return;
+
+    const Vector3 currentPosition = positionOnSphere(event.position());
+    const Vector3 axis = Math::cross(_previousPosition, currentPosition);
+
+    if(_previousPosition.length() < 0.001f || axis.length() < 0.001f) return;
+
+    _cameraObject->rotate(Math::angle(_previousPosition, currentPosition), axis.normalized());
+    _previousPosition = currentPosition;
+
+    redraw();
 }
 }}
 

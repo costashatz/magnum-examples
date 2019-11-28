@@ -61,15 +61,15 @@ class VCTShader: public GL::AbstractShaderProgram {
         VCTShader& setLight() {
             /* Create default light for testing */
             // setUniform(_lightsUniform, Vector4(-1.f, -0.5f, -1.f, 0.f));
-            setUniform(_lightsUniform, Vector4(0.4f, 1.f, 0.f, 1.f));
+            setUniform(_lightsUniform, Vector4(0.f, 0.5f, -0.5f, 1.f));
             setUniform(_lightsUniform + 1, Vector4(1.f, 1.f, 1.f, 1.f));
             setUniform(_lightsUniform + 2, Vector3(1.f, 0.f, 0.f));
             setUniform(_lightsUniform + 3, 1.f);
             setUniform(_lightsUniform + 4, Math::Constants<Magnum::Float>::piHalf());
             setUniform(_lightsUniform + 5, 1.f);
-            setUniform(_lightsUniform + 6, 0.f);
+            setUniform(_lightsUniform + 6, 1.f);
             setUniform(_lightsUniform + 7, 0.f);
-            setUniform(_lightsUniform + 8, 1.f);
+            setUniform(_lightsUniform + 8, 0.f);
 
             return *this;
         }
