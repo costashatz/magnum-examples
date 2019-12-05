@@ -50,7 +50,7 @@ class InjectRadianceShader: public GL::AbstractShaderProgram {
         InjectRadianceShader& setLight() {
             /* Create default light for testing */
             // setUniform(_lightsUniform, Vector4(-1.f, -0.5f, -1.f, 0.f));
-            setUniform(_lightsUniform, Vector4(0.f, 0.5f, -0.5f, 1.f));
+            setUniform(_lightsUniform, Vector4(0.f, 0.75f, -0.5f, 1.f));
             setUniform(_lightsUniform + 1, Vector4(1.f, 1.f, 1.f, 1.f));
             setUniform(_lightsUniform + 2, Vector3(1.f, 0.f, 0.f));
             setUniform(_lightsUniform + 3, 1.f);
@@ -114,7 +114,7 @@ class InjectRadianceShader: public GL::AbstractShaderProgram {
     private:
         Int _volumeDimensionUniform, _voxelSizeUniform, _voxelScaleUniform, _worldMinPointUniform, _traceShadowHitUniform, _lightsUniform;
         // TO-DO: Check why normal texture is storing (or visualizing) weird values
-        Int _albedoPos = 0, _normalPos = 1, _emissionPos = 2, _radiancePos = 3;
+        Int _albedoPos = 0, _normalPos = 2, _emissionPos = 4, _radiancePos = 6;
 };
 }}
 

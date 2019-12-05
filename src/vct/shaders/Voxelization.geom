@@ -26,7 +26,7 @@ int CalculateAxis()
 {
 	vec3 p1 = gl_in[1].gl_Position.xyz - gl_in[0].gl_Position.xyz;
 	vec3 p2 = gl_in[2].gl_Position.xyz - gl_in[0].gl_Position.xyz;
-	vec3 faceNormal = cross(p1, p2);
+	vec3 faceNormal = normalize(cross(p1, p2));
 
 	float nDX = abs(faceNormal.x);
 	float nDY = abs(faceNormal.y);
@@ -79,14 +79,23 @@ void main()
 	trianglePlane.xyz = normalize(trianglePlane.xyz);
 	trianglePlane.w = -dot(pos[0].xyz, trianglePlane.xyz);
 
-    // change winding, otherwise there are artifacts for the back faces.
-    if (dot(trianglePlane.xyz, vec3(0.0, 0.0, 1.0)) < 0.0)
-    {
-        vec4 vertexTemp = pos[2];
+    // // change winding, otherwise there are artifacts for the back faces.
+    // if (dot(trianglePlane.xyz, vec3(0.0, 0.0, 1.0)) < 0.0)
+    // {
+    //     vec4 vertexTemp = pos[2];
 
-        pos[2] = pos[1];
-        pos[1] = vertexTemp;
-    }
+    //     pos[2] = pos[1];
+    //     pos[1] = vertexTemp;
+    // }
+
+	/* Calculate normal equation of triangle plane. */
+	vec3 p1 = gl_in[1].gl_Position.xyz - gl_in[0].gl_Position.xyz;
+	vec3 p2 = gl_in[2].gl_Position.xyz - gl_in[0].gl_Position.xyz;
+	vec3 faceNormal = normalize(cross(p1, p2));
+	vec4 projNormal = transpose(viewProjectionI) * vec4(faceNormal, 0);
+	vec3 normal = projNormal.xyz;
+	float d = dot(pos[0].xyz, normal);
+	float normalSign = (projNormal.z > 0) ? 1.0 : -1.0;
 
 	vec2 halfPixel = vec2(1.0f / volumeDimension);
 
@@ -99,9 +108,9 @@ void main()
 	planes[0] = cross(pos[0].xyw - pos[2].xyw, pos[2].xyw);
 	planes[1] = cross(pos[1].xyw - pos[0].xyw, pos[0].xyw);
 	planes[2] = cross(pos[2].xyw - pos[1].xyw, pos[1].xyw);
-	planes[0].z -= dot(halfPixel, abs(planes[0].xy));
-	planes[1].z -= dot(halfPixel, abs(planes[1].xy));
-	planes[2].z -= dot(halfPixel, abs(planes[2].xy));
+	planes[0].z += normalSign*dot(halfPixel, abs(planes[0].xy));
+	planes[1].z += normalSign*dot(halfPixel, abs(planes[1].xy));
+	planes[2].z += normalSign*dot(halfPixel, abs(planes[2].xy));
 	// calculate intersection between translated planes
 	vec3 intersection[3];
 	intersection[0] = cross(planes[0], planes[1]);

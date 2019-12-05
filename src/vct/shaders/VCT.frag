@@ -174,7 +174,7 @@ float TraceShadowCone(vec3 position, vec3 direction, float aperture, float maxTr
 {
     bool hardShadows = false;
 
-    if(coneShadowTolerance == 1.) { hardShadows = true; }
+    if(coneShadowTolerance >= 1.) { hardShadows = true; }
 
     // directional dominat axis
     uvec3 visibleFace;
@@ -182,7 +182,7 @@ float TraceShadowCone(vec3 position, vec3 direction, float aperture, float maxTr
     visibleFace.y = (direction.y < 0.) ? 2 : 3;
     visibleFace.z = (direction.z < 0.) ? 4 : 5;
     // world space grid size
-    float voxelWorldSize = 3. /  (voxelScale * volumeDimension);
+    float voxelWorldSize = 12. /  (voxelScale * volumeDimension);
     // weight per axis for aniso sampling
     vec3 weight = direction * direction;
     // move further to avoid self collision
@@ -222,7 +222,7 @@ float TraceShadowCone(vec3 position, vec3 direction, float aperture, float maxTr
         dst += diameter * samplingFactor;
     }
 
-    return 1.0f - visibility;
+    return 1. - visibility;
 }
 
 vec4 CalculateIndirectLighting(vec3 position, vec3 normal, vec3 albedo, vec4 specular)
@@ -244,7 +244,7 @@ vec4 CalculateIndirectLighting(vec3 position, vec3 normal, vec3 albedo, vec4 spe
     }
 
     // component greater than zero
-    if(any(greaterThan(albedo, diffuseTrace.rgb)))
+    // if(any(greaterThan(albedo, diffuseTrace.rgb)))
     {
         // diffuse cone setup
         const float aperture = 0.57735; //0.325;

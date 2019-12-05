@@ -61,7 +61,7 @@ class VCTShader: public GL::AbstractShaderProgram {
         VCTShader& setLight() {
             /* Create default light for testing */
             // setUniform(_lightsUniform, Vector4(-1.f, -0.5f, -1.f, 0.f));
-            setUniform(_lightsUniform, Vector4(0.f, 0.5f, -0.5f, 1.f));
+            setUniform(_lightsUniform, Vector4(0.f, 0.75f, -0.5f, 1.f));
             setUniform(_lightsUniform + 1, Vector4(1.f, 1.f, 1.f, 1.f));
             setUniform(_lightsUniform + 2, Vector3(1.f, 0.f, 0.f));
             setUniform(_lightsUniform + 3, 1.f);

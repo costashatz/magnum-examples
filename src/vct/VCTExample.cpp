@@ -149,8 +149,8 @@ class VCTExample: public Platform::Application {
         RenderTextureShader _renderTextureShader;
         VCTShader _vctShader;
         Shaders::Flat3D _flatShader;
-        Int _volumeDimension = 64;
-        Float _volumeGridSize = 1.5f;
+        Int _volumeDimension = 128;
+        Float _volumeGridSize = 2.f;
         Float _voxelSize = _volumeGridSize / static_cast<Float>(_volumeDimension);
         Float _voxelScale = 1.f / _volumeGridSize;
         Vector3 _minPoint = {-_volumeGridSize / 2.f, -_volumeGridSize / 2.f, -_volumeGridSize / 2.f};
@@ -283,7 +283,7 @@ void VCTExample::drawEvent() {
         .setVoxelScale(_voxelScale)
         .setVoxelSize(_voxelSize)
         .setMinPoint(_minPoint)
-        .setTraceShadowHit(0.2f)
+        .setTraceShadowHit(0.8f)
         .bindAlbedoTexture(_albedoTexture)
         .bindNormalTexture(_normalTexture)
         .bindEmissionTexture(_emissionTexture)
@@ -386,9 +386,9 @@ void VCTExample::drawEvent() {
         .setAOAlpha(0.f)
         .setAOFalloff(800.f)
         .setMaxTracingDistance(0.95f)
-        .setSamplingFactor(0.03f)
-        .setBounceStrength(1.f)
-        .setConeShadowTolerance(0.5f)
+        .setSamplingFactor(0.1f)
+        .setBounceStrength(0.2f)
+        .setConeShadowTolerance(0.2f)
         .setConeShadowAperture(0.2f)
         .bindAlbedoTexture(_geometryAlbedoTexture)
         .bindNormalTexture(_geometryNormalTexture)
